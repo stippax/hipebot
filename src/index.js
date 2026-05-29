@@ -1,6 +1,6 @@
 require("dotenv").config();
 
-const { Client, GatewayIntentBits, Partials } = require("discord.js");
+const { Client, Events, GatewayIntentBits, Partials } = require("discord.js");
 const { loadModules } = require("./loaders/moduleLoader");
 
 const token = process.env.DISCORD_TOKEN;
@@ -21,8 +21,8 @@ async function bootstrap() {
   const loadedModules = await loadModules(client);
   client.loadedModules = loadedModules;
 
-  client.once("ready", () => {
-  console.log(`Bot conectado como ${client.user.tag}.`);
+  client.once(Events.ClientReady, () => {
+    console.log(`Bot conectado como ${client.user.tag}.`);
     console.log(`Modulos carregados: ${loadedModules.join(", ") || "nenhum"}.`);
   });
 
