@@ -15,18 +15,26 @@ Bot de Discord modular, pensado para crescer por pastas de modulo sem alterar a 
 npm install
 ```
 
-2. Copie `.env.example` para `.env` e preencha:
+2. Para producao simples ou uso geral, copie `.env.example` para `.env` e preencha:
 
 ```env
 DISCORD_TOKEN=seu_token
 ```
 
-3. Configure os canais de log em `modules/member-logs/config.json`.
+3. Para teste local no Windows, copie `.env.local.example` para `.env.local` e preencha o token local.
 
-4. Inicie o bot:
+4. Configure os canais de log em `modules/member-logs/config.json`.
+
+5. Inicie o bot:
 
 ```bash
 npm start
+```
+
+Ou, no Windows, rode:
+
+```bat
+start.bat
 ```
 
 ## Deploy na Square Cloud
@@ -42,7 +50,8 @@ O projeto ja inclui o arquivo `squarecloud.app` na raiz, pronto para deploy.
 
 ### Observacoes
 
-- Nao envie `.env` para producao.
+- `.env.local` tem prioridade sobre `.env` ao iniciar localmente.
+- Nao envie `.env` ou `.env.local` para producao.
 - A Square Cloud instala as dependencias a partir do `package.json`.
 - O comando de inicializacao usado no deploy e `npm run start`.
 
