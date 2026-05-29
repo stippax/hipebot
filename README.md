@@ -29,6 +29,23 @@ DISCORD_TOKEN=seu_token
 npm start
 ```
 
+## Deploy na Square Cloud
+
+O projeto ja inclui o arquivo `squarecloud.app` na raiz, pronto para deploy.
+
+### Via GitHub
+
+1. Importe o repositorio no painel da Square Cloud.
+2. Configure a variavel de ambiente `DISCORD_TOKEN` no app.
+3. Edite `modules/member-logs/config.json` com o ID do canal de logs.
+4. Ative o `SERVER MEMBERS INTENT` no Discord Developer Portal.
+
+### Observacoes
+
+- Nao envie `.env` para producao.
+- A Square Cloud instala as dependencias a partir do `package.json`.
+- O comando de inicializacao usado no deploy e `npm run start`.
+
 ## Estrutura
 
 - `src/index.js`: bootstrap do bot
