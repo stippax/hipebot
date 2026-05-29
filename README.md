@@ -21,7 +21,7 @@ npm install
 DISCORD_TOKEN=seu_token
 ```
 
-3. Configure o canal de log em `modules/member-logs/config.json`.
+3. Configure os canais de log em `modules/member-logs/config.json`.
 
 4. Inicie o bot:
 
@@ -52,6 +52,15 @@ O projeto ja inclui o arquivo `squarecloud.app` na raiz, pronto para deploy.
 - `src/loaders/moduleLoader.js`: carregador automatico de modulos
 - `modules/<nome-do-modulo>/index.js`: logica do modulo
 - `modules/<nome-do-modulo>/config.json`: configuracao isolada do modulo
+
+## Modulo inicial
+
+O modulo `member-logs` envia logs de:
+
+- entrada em `joinChannelId`
+- saida em `leaveChannelId`
+
+Ele usa componentes v2 do Discord para montar um card visual no canal, em vez de um embed simples.
 
 ## Criando novos modulos
 

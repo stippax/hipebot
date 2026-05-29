@@ -1,19 +1,51 @@
-const { EmbedBuilder, Events } = require("discord.js");
+const {
+  ContainerBuilder,
+  Events,
+  MessageFlags,
+  SectionBuilder,
+  SeparatorBuilder,
+  TextDisplayBuilder,
+  ThumbnailBuilder
+} = require("discord.js");
 
-function buildEmbed({ color, title, description, member }) {
-  return new EmbedBuilder()
-    .setColor(color)
-    .setTitle(title)
-    .setDescription(description)
-    .setThumbnail(member.user.displayAvatarURL())
-    .setTimestamp();
+function formatDate(value) {
+  return value ? `<t:${Math.floor(value.getTime() / 1000)}:F>` : "Nao disponivel";
 }
 
-async function sendLog(client, guild, embed, config) {
-  const channelId = config.channelId;
+function buildLogCard({ accentColor, heading, summary, details, member }) {
+  const avatarUrl = member.user.displayAvatarURL({ size: 256 });
+  const container = new ContainerBuilder().setAccentColor(accentColor);
+
+  const headerSection = new SectionBuilder()
+    .addTextDisplayComponents(
+      new TextDisplayBuilder().setContent(`## ${heading}`),
+      new TextDisplayBuilder().setContent(summary)
+    )
+    .setThumbnailAccessory(
+      new ThumbnailBuilder()
+        .setURL(avatarUrl)
+        .setDescription(`Avatar de ${member.user.tag}`)
+    );
+
+  const detailsBlock = new TextDisplayBuilder().setContent(details.join("\n"));
+
+  container
+    .addSectionComponents(headerSection)
+    .addSeparatorComponents(new SeparatorBuilder())
+    .addTextDisplayComponents(detailsBlock);
+
+  return container;
+}
+
+function resolveChannelId(config, type) {
+  return type === "join" ? config.joinChannelId : config.leaveChannelId;
+}
+
+async function sendLog(client, guild, component, config, type) {
+  const channelId = resolveChannelId(config, type);
 
   if (!channelId) {
-    console.warn(`[member-logs] channelId nao configurado para a guild ${guild.name}.`);
+    console.warn(`[member-logs] ${type}ChannelId nao configurado para a guild ${guild.name}.`);
     return;
   }
 
@@ -25,7 +57,10 @@ async function sendLog(client, guild, embed, config) {
       return;
     }
 
-    await channel.send({ embeds: [embed] });
+    await channel.send({
+      components: [component],
+      flags: MessageFlags.IsComponentsV2
+    });
   } catch (error) {
     console.error(`[member-logs] Falha ao enviar log para o canal ${channelId}.`, error);
   }
@@ -33,25 +68,37 @@ async function sendLog(client, guild, embed, config) {
 
 async function register({ client, config }) {
   client.on(Events.GuildMemberAdd, async (member) => {
-    const embed = buildEmbed({
-      color: 0x57f287,
-      title: "Membro entrou",
-      description: `${member.user} entrou no servidor.`,
+    const component = buildLogCard({
+      accentColor: 0x57f287,
+      heading: "Entrada registrada",
+      summary: `${member.user} acabou de entrar no servidor **${member.guild.name}**.`,
+      details: [
+        `**Usuario:** ${member.user.tag}`,
+        `**ID:** ${member.id}`,
+        `**Conta criada em:** ${formatDate(member.user.createdAt)}`,
+        `**Entrou em:** ${formatDate(new Date())}`
+      ],
       member
     });
 
-    await sendLog(client, member.guild, embed, config);
+    await sendLog(client, member.guild, component, config, "join");
   });
 
   client.on(Events.GuildMemberRemove, async (member) => {
-    const embed = buildEmbed({
-      color: 0xed4245,
-      title: "Membro saiu",
-      description: `${member.user.tag} saiu do servidor.`,
+    const component = buildLogCard({
+      accentColor: 0xed4245,
+      heading: "Saida registrada",
+      summary: `**${member.user.tag}** acabou de sair do servidor **${member.guild.name}**.`,
+      details: [
+        `**Usuario:** ${member.user.tag}`,
+        `**ID:** ${member.id}`,
+        `**Conta criada em:** ${formatDate(member.user.createdAt)}`,
+        `**Saiu em:** ${formatDate(new Date())}`
+      ],
       member
     });
 
-    await sendLog(client, member.guild, embed, config);
+    await sendLog(client, member.guild, component, config, "leave");
   });
 }
 
