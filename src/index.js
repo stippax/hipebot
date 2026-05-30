@@ -24,9 +24,16 @@ if (!token) {
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers
+    GatewayIntentBits.GuildMembers,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.GuildMessageReactions
   ],
-  partials: [Partials.GuildMember]
+  partials: [
+    Partials.GuildMember,
+    Partials.Channel,
+    Partials.Message,
+    Partials.Reaction
+  ]
 });
 
 async function bootstrap() {

@@ -1,0 +1,42 @@
+{
+  "panelChannelId": "1416072074887172096",
+  "categoryId": "1416071727443611809",
+  "staffRoleId": "1416071559004553357",
+  "ticketLogChannelId": "COLOQUE_O_ID_DO_CANAL_DE_LOGS_DO_TICKET",
+  "ticketNamePrefix": "ticket",
+  "panelTitle": "Central de Atendimento",
+  "panelDescription": "Selecione abaixo o tipo de atendimento que deseja abrir com a equipe.",
+  "welcomeMessage": "Descreva seu problema ou pedido com o maximo de detalhes possivel.",
+  "selectPlaceholder": "Selecione o tipo de ticket",
+  "staffMenuButtonLabel": "Menu Staff",
+  "leaveTicketButtonLabel": "Sair do Ticket",
+  "addMemberButtonLabel": "Adicionar Membro",
+  "removeMemberButtonLabel": "Remover Membro",
+  "closeButtonLabel": "Fechar Ticket",
+  "ticketTypes": [
+    {
+      "value": "parceria",
+      "label": "Parceria",
+      "description": "Solicitacoes de parceria, collab e divulgacao.",
+      "emoji": "🤝",
+      "channelPrefix": "parceria",
+      "welcomeMessage": "Explique sua proposta de parceria com todos os detalhes relevantes."
+    },
+    {
+      "value": "suporte",
+      "label": "Suporte",
+      "description": "Ajuda tecnica, erros, duvidas e problemas.",
+      "emoji": "🛠️",
+      "channelPrefix": "suporte",
+      "welcomeMessage": "Descreva o problema, erro ou duvida para a equipe te ajudar."
+    },
+    {
+      "value": "orcamento",
+      "label": "Orcamento",
+      "description": "Pedidos comerciais, valores e escopo de projeto.",
+      "emoji": "💼",
+      "channelPrefix": "orcamento",
+      "welcomeMessage": "Informe o que voce precisa e os detalhes do servico para receber um orcamento."
+    }
+  ]
+}
