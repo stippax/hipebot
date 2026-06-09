@@ -1,0 +1,9 @@
+{
+  "panelChannelId": "COLOQUE_O_ID_DO_CANAL_DA_ALLOWLIST",
+  "title": "Iniciar Allowlist",
+  "description": "Clique no botao abaixo para iniciar sua allowlist e entrar na cidade.",
+  "buttonLabel": "Allowlist",
+  "allowlistUrl": "http://localhost:3000/allowlistw",
+  "thumbnailUrl": "https://cdn.discordapp.com/embed/avatars/0.png",
+  "accentColor": 3066993
+}
