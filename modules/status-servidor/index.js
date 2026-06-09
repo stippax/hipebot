@@ -41,6 +41,8 @@ function resolveConfig(config) {
     statusColor: Number.isInteger(config.statusColor) ? config.statusColor : 0x57f287,
     ipLabel: config.ipLabel || "IP FiveM",
     serverIp: config.serverIp || "connect euforiarp.gg",
+    websiteLabel: config.websiteLabel || "Nosso website",
+    website: config.website || "godsgroup.com.br",
     updateText: config.updateText || "Atualizando a cada 1 minuto",
     timezone: config.timezone || "America/Sao_Paulo",
     bannerUrl: config.bannerUrl || null,
@@ -61,13 +63,15 @@ function formatTime(config, date) {
 }
 
 function buildStatusContent(config) {
-  const leftLabel = "STATUS".padEnd(18, " ");
-  const leftValue = `\u25cf ${config.statusLabel}`.padEnd(18, " ");
+  const statusLabel = "STATUS".padEnd(14, " ");
+  const ipLabel = config.ipLabel.toUpperCase().padEnd(24, " ");
+  const statusValue = `\u25cf ${config.statusLabel}`.padEnd(14, " ");
+  const ipValue = config.serverIp.padEnd(24, " ");
 
   return [
     "```ansi",
-    `${leftLabel}${config.ipLabel.toUpperCase()}`,
-    `\u001b[2;32m${leftValue}\u001b[0m\u001b[2;34m${config.serverIp}\u001b[0m`,
+    `${statusLabel}${ipLabel}${config.websiteLabel.toUpperCase()}`,
+    `\u001b[2;32m${statusValue}\u001b[0m\u001b[2;34m${ipValue}\u001b[0m${config.website}`,
     "```"
   ].join("\n");
 }
