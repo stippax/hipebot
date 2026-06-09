@@ -36,6 +36,7 @@ function resolveConfig(config) {
   return {
     panelChannelId: isSnowflake(config.panelChannelId) ? config.panelChannelId : null,
     cityName: config.cityName || "EUFORIA ROLEPLAY",
+    subtitle: config.subtitle || "Acompanhe o status da cidade e use os atalhos abaixo para entrar, visitar nossas redes ou acessar a loja.",
     statusLabel: config.statusLabel || "ONLINE",
     statusColor: Number.isInteger(config.statusColor) ? config.statusColor : 0x57f287,
     ipLabel: config.ipLabel || "IP FiveM",
@@ -59,17 +60,20 @@ function formatTime(config, date) {
   }).format(date);
 }
 
-function buildStatusContent(config, updatedAt) {
+function buildStatusContent(config) {
+  const leftLabel = "STATUS".padEnd(18, " ");
+  const leftValue = `\u25cf ${config.statusLabel}`.padEnd(18, " ");
+
   return [
-    "__**Status:**__",
-    "",
-    `\`\`\`ansi\n\u001b[2;32m\u25cf ${config.statusLabel}\u001b[0m\n\`\`\``,
-    `__**${config.ipLabel}:**__`,
-    "",
-    `\`\`\`ansi\n\u001b[2;34m${config.serverIp}\u001b[0m\n\`\`\``,
-    "",
-    `**${config.updateText} | Ultima atualizacao: ${formatTime(config, updatedAt)}**`
+    "```ansi",
+    `${leftLabel}${config.ipLabel.toUpperCase()}`,
+    `\u001b[2;32m${leftValue}\u001b[0m\u001b[2;34m${config.serverIp}\u001b[0m`,
+    "```"
   ].join("\n");
+}
+
+function buildFooterText(config, updatedAt) {
+  return `-# ${config.updateText} | Ultima atualizacao: ${formatTime(config, updatedAt)}`;
 }
 
 function buildButton(button) {
@@ -108,7 +112,8 @@ function buildStatusPanel(config, updatedAt = new Date()) {
 
   const header = new SectionBuilder()
     .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(`## ${config.cityName}`)
+      new TextDisplayBuilder().setContent(`## ${config.cityName}`),
+      new TextDisplayBuilder().setContent(config.subtitle)
     );
 
   if (config.thumbnailUrl) {
@@ -123,7 +128,7 @@ function buildStatusPanel(config, updatedAt = new Date()) {
     .addSectionComponents(header)
     .addSeparatorComponents(new SeparatorBuilder())
     .addTextDisplayComponents(
-      new TextDisplayBuilder().setContent(buildStatusContent(config, updatedAt))
+      new TextDisplayBuilder().setContent(buildStatusContent(config))
     );
 
   if (config.bannerUrl) {
@@ -135,6 +140,10 @@ function buildStatusPanel(config, updatedAt = new Date()) {
       )
     );
   }
+
+  container.addTextDisplayComponents(
+    new TextDisplayBuilder().setContent(buildFooterText(config, updatedAt))
+  );
 
   for (const row of buildButtonRows(config)) {
     container.addActionRowComponents(row);
