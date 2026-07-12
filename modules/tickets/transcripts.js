@@ -101,10 +101,10 @@ function serializeUser(user) {
 function serializeAttachment(attachment, storage = null) {
   return {
     id: attachment.id,
-    name: attachment.name,
+    name: storage?.fileName || attachment.name,
     url: attachment.url,
     proxyUrl: attachment.proxyURL || null,
-    contentType: attachment.contentType || null,
+    contentType: storage?.contentType || attachment.contentType || null,
     size: attachment.size || 0,
     storage
   };
@@ -183,8 +183,12 @@ async function buildTranscript(channel, metadata, closedBy) {
   const serializedMessages = [];
 
   for (const message of messages) {
-    const attachments = await Promise.all(
+    const attachments = (await Promise.all(
       [...message.attachments.values()].map(async (attachment) => {
+        if (!attachment.contentType?.startsWith("image/")) {
+          return null;
+        }
+
         let storage = null;
 
         try {
@@ -198,9 +202,9 @@ async function buildTranscript(channel, metadata, closedBy) {
           console.error(`[tickets] Falha ao enviar anexo ${attachment.id} para o R2.`, error);
         }
 
-        return serializeAttachment(attachment, storage);
+        return storage ? serializeAttachment(attachment, storage) : null;
       })
-    );
+    )).filter(Boolean);
 
     serializedMessages.push({
       id: message.id,

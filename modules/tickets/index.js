@@ -26,6 +26,11 @@ const REMOVE_MEMBER_BUTTON_ID = "tickets:remove-member";
 const ADD_MEMBER_SELECT_ID = "tickets:add-member-select";
 const REMOVE_MEMBER_SELECT_ID = "tickets:remove-member-select";
 const TICKET_TOPIC_PREFIX = "ticket-owner:";
+const closingTicketIds = new Set();
+
+function isConsumedInteractionError(error) {
+  return error?.code === 10062 || error?.code === 40060;
+}
 
 function isSnowflake(value) {
   return typeof value === "string" && /^\d{17,20}$/.test(value);
@@ -414,12 +419,21 @@ async function findOpenTicket(guild, userId, config) {
 }
 
 async function createTicket(interaction, config, ticketType) {
+  try {
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+  } catch (error) {
+    if (isConsumedInteractionError(error)) {
+      return;
+    }
+
+    throw error;
+  }
+
   const existingTicket = await findOpenTicket(interaction.guild, interaction.user.id, config);
 
   if (existingTicket) {
-    await interaction.reply({
-      content: `Voce ja possui um ticket aberto em ${existingTicket}.`,
-      flags: MessageFlags.Ephemeral
+    await interaction.editReply({
+      content: `Voce ja possui um ticket aberto em ${existingTicket}.`
     });
     return;
   }
@@ -476,9 +490,8 @@ async function createTicket(interaction, config, ticketType) {
     throw error;
   }
 
-  await interaction.reply({
-    content: `Seu ticket de **${ticketType.label}** foi criado em ${ticketChannel}.`,
-    flags: MessageFlags.Ephemeral
+  await interaction.editReply({
+    content: `Seu ticket de **${ticketType.label}** foi criado em ${ticketChannel}.`
   });
 }
 
@@ -501,7 +514,27 @@ async function closeTicket(interaction, client, config) {
     return;
   }
 
-  await interaction.deferReply();
+  try {
+    await interaction.deferUpdate();
+  } catch (error) {
+    if (isConsumedInteractionError(error)) {
+      return;
+    }
+
+    throw error;
+  }
+
+  if (closingTicketIds.has(channel.id)) {
+    await interaction.followUp({
+      content: "Este ticket ja esta sendo fechado.",
+      flags: MessageFlags.Ephemeral
+    }).catch(() => {});
+    return;
+  }
+
+  closingTicketIds.add(channel.id);
+
+  const sendStatusMessage = (content) => interaction.followUp({ content }).catch(() => {});
 
   let transcript;
   let access;
@@ -526,24 +559,26 @@ async function closeTicket(interaction, client, config) {
   } catch (error) {
     console.error("[tickets] Falha ao gerar historico do ticket.", error);
 
-    await interaction.editReply({
-      content: "Nao foi possivel salvar o historico deste ticket. O canal nao foi apagado."
-    });
+    await sendStatusMessage("Nao foi possivel salvar o historico deste ticket. O canal nao foi apagado.");
+    closingTicketIds.delete(channel.id);
     return;
   }
 
-  await interaction.editReply({
-    content: [
+  await sendStatusMessage(
+    [
       "Ticket fechado. O historico foi salvo e este canal sera apagado em 5 segundos.",
       access.url ? `Link: ${access.url}` : null,
       dmStats ? `DMs enviadas: ${dmStats.sent}/${dmStats.total}.` : null
     ].filter(Boolean).join("\n")
-  });
+  );
 
   setTimeout(async () => {
     await channel.delete("Ticket encerrado").catch((error) => {
-      console.error("[tickets] Falha ao apagar canal de ticket.", error);
+      if (error?.code !== 10003) {
+        console.error("[tickets] Falha ao apagar canal de ticket.", error);
+      }
     });
+    closingTicketIds.delete(channel.id);
   }, 5000);
 }
 
@@ -750,7 +785,11 @@ async function register({ client, config }) {
       } catch (error) {
         console.error("[tickets] Falha ao criar ticket.", error);
 
-        if (!interaction.replied && !interaction.deferred) {
+        if (interaction.deferred) {
+          await interaction.editReply({
+            content: "Nao foi possivel criar seu ticket agora."
+          }).catch(() => {});
+        } else if (!interaction.replied) {
           await interaction.reply({
             content: "Nao foi possivel criar seu ticket agora.",
             flags: MessageFlags.Ephemeral
@@ -869,7 +908,14 @@ async function register({ client, config }) {
       } catch (error) {
         console.error("[tickets] Falha ao fechar ticket.", error);
 
-        if (!interaction.replied && !interaction.deferred) {
+        closingTicketIds.delete(interaction.channelId);
+
+        if (interaction.deferred || interaction.replied) {
+          await interaction.followUp({
+            content: "Nao foi possivel fechar este ticket agora.",
+            flags: MessageFlags.Ephemeral
+          }).catch(() => {});
+        } else {
           await interaction.reply({
             content: "Nao foi possivel fechar este ticket agora.",
             flags: MessageFlags.Ephemeral
