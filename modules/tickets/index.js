@@ -6,6 +6,8 @@ const {
   ContainerBuilder,
   EmbedBuilder,
   Events,
+  MediaGalleryBuilder,
+  MediaGalleryItemBuilder,
   MessageFlags,
   PermissionFlagsBits,
   SectionBuilder,
@@ -26,6 +28,7 @@ const REMOVE_MEMBER_BUTTON_ID = "tickets:remove-member";
 const ADD_MEMBER_SELECT_ID = "tickets:add-member-select";
 const REMOVE_MEMBER_SELECT_ID = "tickets:remove-member-select";
 const TICKET_TOPIC_PREFIX = "ticket-owner:";
+const TICKET_BANNER_URL = "https://media.discordapp.net/attachments/1513993233812820162/1513995484820148244/allowlist.png";
 const closingTicketIds = new Set();
 
 function isConsumedInteractionError(error) {
@@ -143,7 +146,7 @@ function findTicketType(config, value) {
 }
 
 function buildPanelCard(config) {
-  return new ContainerBuilder()
+  const container = new ContainerBuilder()
     .setAccentColor(0x5865f2)
     .addSectionComponents(
       new SectionBuilder()
@@ -161,6 +164,12 @@ function buildPanelCard(config) {
         )
     )
     .addSeparatorComponents(new SeparatorBuilder())
+    .addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(
+        new MediaGalleryItemBuilder()
+          .setURL(TICKET_BANNER_URL)
+      )
+    )
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         config.ticketTypes
@@ -168,6 +177,8 @@ function buildPanelCard(config) {
           .join("\n")
       )
     );
+
+  return container;
 }
 
 function buildPanelComponents(config) {
@@ -196,7 +207,7 @@ function buildTicketCard(member, config, ticketType) {
     ? `${member} <@&${effectiveStaffRoleId}>`
     : `${member}`;
 
-  return new ContainerBuilder()
+  const container = new ContainerBuilder()
     .setAccentColor(0x57f287)
     .addSectionComponents(
       new SectionBuilder()
@@ -211,6 +222,12 @@ function buildTicketCard(member, config, ticketType) {
         )
     )
     .addSeparatorComponents(new SeparatorBuilder())
+    .addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(
+        new MediaGalleryItemBuilder()
+          .setURL(TICKET_BANNER_URL)
+      )
+    )
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         [
@@ -222,8 +239,11 @@ function buildTicketCard(member, config, ticketType) {
           welcomeMessage || "Descreva aqui o que voce precisa para a equipe continuar o atendimento."
         ].filter(Boolean).join("\n")
       )
-    )
-    .addActionRowComponents(...buildTicketActionRows(config));
+    );
+
+  container.addActionRowComponents(...buildTicketActionRows(config));
+
+  return container;
 }
 
 function buildTicketActionRows(config) {
