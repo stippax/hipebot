@@ -4,6 +4,9 @@ const path = require("node:path");
 const projectRoot = path.resolve(__dirname, "..");
 const targetDir = path.join(projectRoot, ".squarecloud-deploy-temp");
 const includedEntries = ["modules", "src", "package.json", "package-lock.json", "squarecloud.app"];
+const excludedRelativePaths = new Set([
+  path.normalize("modules/ponto/data.json")
+]);
 
 function assertInsideProject(targetPath) {
   const relative = path.relative(projectRoot, targetPath);
@@ -21,7 +24,17 @@ function removeTargetDirectory() {
   }
 }
 
+function shouldSkip(sourcePath) {
+  const relativePath = path.relative(projectRoot, sourcePath);
+
+  return excludedRelativePaths.has(path.normalize(relativePath));
+}
+
 function copyRecursive(sourcePath, targetPath) {
+  if (shouldSkip(sourcePath)) {
+    return;
+  }
+
   const sourceStat = fs.statSync(sourcePath);
 
   if (sourceStat.isDirectory()) {
