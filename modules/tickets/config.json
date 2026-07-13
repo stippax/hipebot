@@ -1,8 +1,12 @@
 {
-  "panelChannelId": "1416072074887172096",
-  "categoryId": "1416071727443611809",
-  "staffRoleId": "1416071559004553357",
-  "ticketLogChannelId": "COLOQUE_O_ID_DO_CANAL_DE_LOGS_DO_TICKET",
+  "panelChannelId": "1513564829393096895",
+  "categoryId": "1513563252116946995",
+  "staffRoleId": "1514385812983119944",
+  "ticketLogChannelId": "1514385952124960828",
+  "transcriptBaseUrl": "https://lineuplabs-six.vercel.app",
+  "transcriptTable": "ticket_transcripts",
+  "panelBannerUrl": "https://pub-ee60c3f232164d2ebd819cffe70d5d93.r2.dev/assets/prf/prf-atendimento.png",
+  "ticketBannerUrl": "https://pub-ee60c3f232164d2ebd819cffe70d5d93.r2.dev/assets/prf/prf-atendimento.png",
   "ticketNamePrefix": "ticket",
   "panelTitle": "Central de Atendimento",
   "panelDescription": "Selecione abaixo o tipo de atendimento que deseja abrir com a equipe.",
@@ -15,14 +19,6 @@
   "closeButtonLabel": "Fechar Ticket",
   "ticketTypes": [
     {
-      "value": "parceria",
-      "label": "Parceria",
-      "description": "Solicitacoes de parceria, collab e divulgacao.",
-      "emoji": "🤝",
-      "channelPrefix": "parceria",
-      "welcomeMessage": "Explique sua proposta de parceria com todos os detalhes relevantes."
-    },
-    {
       "value": "suporte",
       "label": "Suporte",
       "description": "Ajuda tecnica, erros, duvidas e problemas.",
@@ -31,11 +27,27 @@
       "welcomeMessage": "Descreva o problema, erro ou duvida para a equipe te ajudar."
     },
     {
-      "value": "orcamento",
-      "label": "Orcamento",
+      "value": "denuncia",
+      "label": "Denúncia",
+      "description": "Solicitacoes de parceria, collab e divulgacao.",
+      "emoji": "🤝",
+      "channelPrefix": "denuncia",
+      "welcomeMessage": "Explique sua proposta de parceria com todos os detalhes relevantes."
+    },
+    {
+      "value": "parceria",
+      "label": "Parceria",
+      "description": "Solicitacoes de parceria, collab e divulgacao.",
+      "emoji": "🤝",
+      "channelPrefix": "parceria",
+      "welcomeMessage": "Explique sua proposta de parceria com todos os detalhes relevantes."
+    },
+    {
+      "value": "lojavip",
+      "label": "Loja Vip",
       "description": "Pedidos comerciais, valores e escopo de projeto.",
       "emoji": "💼",
-      "channelPrefix": "orcamento",
+      "channelPrefix": "vip",
       "welcomeMessage": "Informe o que voce precisa e os detalhes do servico para receber um orcamento."
     }
   ]

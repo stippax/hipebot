@@ -28,7 +28,6 @@ const REMOVE_MEMBER_BUTTON_ID = "tickets:remove-member";
 const ADD_MEMBER_SELECT_ID = "tickets:add-member-select";
 const REMOVE_MEMBER_SELECT_ID = "tickets:remove-member-select";
 const TICKET_TOPIC_PREFIX = "ticket-owner:";
-const TICKET_BANNER_URL = "https://media.discordapp.net/attachments/1513993233812820162/1513995484820148244/allowlist.png";
 const closingTicketIds = new Set();
 
 function isConsumedInteractionError(error) {
@@ -137,6 +136,12 @@ function resolveConfig(config) {
     categoryId: isSnowflake(config.categoryId) ? config.categoryId : null,
     staffRoleId: isSnowflake(config.staffRoleId) ? config.staffRoleId : null,
     ticketLogChannelId: isSnowflake(config.ticketLogChannelId) ? config.ticketLogChannelId : null,
+    panelBannerUrl: typeof config.panelBannerUrl === "string" && config.panelBannerUrl.trim()
+      ? config.panelBannerUrl.trim()
+      : null,
+    ticketBannerUrl: typeof config.ticketBannerUrl === "string" && config.ticketBannerUrl.trim()
+      ? config.ticketBannerUrl.trim()
+      : null,
     ticketTypes: resolveTicketTypes(config)
   };
 }
@@ -164,12 +169,6 @@ function buildPanelCard(config) {
         )
     )
     .addSeparatorComponents(new SeparatorBuilder())
-    .addMediaGalleryComponents(
-      new MediaGalleryBuilder().addItems(
-        new MediaGalleryItemBuilder()
-          .setURL(TICKET_BANNER_URL)
-      )
-    )
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         config.ticketTypes
@@ -177,6 +176,15 @@ function buildPanelCard(config) {
           .join("\n")
       )
     );
+
+  if (config.panelBannerUrl) {
+    container.addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(
+        new MediaGalleryItemBuilder()
+          .setURL(config.panelBannerUrl)
+      )
+    );
+  }
 
   return container;
 }
@@ -222,12 +230,6 @@ function buildTicketCard(member, config, ticketType) {
         )
     )
     .addSeparatorComponents(new SeparatorBuilder())
-    .addMediaGalleryComponents(
-      new MediaGalleryBuilder().addItems(
-        new MediaGalleryItemBuilder()
-          .setURL(TICKET_BANNER_URL)
-      )
-    )
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         [
@@ -240,6 +242,15 @@ function buildTicketCard(member, config, ticketType) {
         ].filter(Boolean).join("\n")
       )
     );
+
+  if (config.ticketBannerUrl) {
+    container.addMediaGalleryComponents(
+      new MediaGalleryBuilder().addItems(
+        new MediaGalleryItemBuilder()
+          .setURL(config.ticketBannerUrl)
+      )
+    );
+  }
 
   container.addActionRowComponents(...buildTicketActionRows(config));
 
