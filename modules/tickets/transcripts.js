@@ -5,6 +5,8 @@ const { uploadAttachmentToR2 } = require("./r2");
 
 const DEFAULT_TABLE = "ticket_transcripts";
 const PLACEHOLDER_BASE_URL = "https://seu-site.com";
+const STAFF_MENU_BUTTON_ID = "tickets:staff-menu";
+const LEAVE_TICKET_BUTTON_ID = "tickets:leave";
 
 function createTranscriptClient() {
   const url = process.env.SUPABASE_URL;
@@ -129,6 +131,43 @@ function serializeEmbed(embed) {
   };
 }
 
+function componentTreeHasCustomId(component, customId) {
+  if (!component) {
+    return false;
+  }
+
+  if (component.customId === customId || component.custom_id === customId) {
+    return true;
+  }
+
+  if (component.accessory?.customId === customId || component.accessory?.custom_id === customId) {
+    return true;
+  }
+
+  if (Array.isArray(component.components)) {
+    return component.components.some((child) => componentTreeHasCustomId(child, customId));
+  }
+
+  if (Array.isArray(component.accessory?.components)) {
+    return component.accessory.components.some((child) => componentTreeHasCustomId(child, customId));
+  }
+
+  return false;
+}
+
+function messageHasCustomId(message, customId) {
+  return Array.isArray(message?.components)
+    && message.components.some((component) => componentTreeHasCustomId(component, customId));
+}
+
+function shouldSkipTranscriptMessage(message) {
+  return Boolean(
+    message?.author?.bot
+    && messageHasCustomId(message, STAFF_MENU_BUTTON_ID)
+    && messageHasCustomId(message, LEAVE_TICKET_BUTTON_ID)
+  );
+}
+
 async function fetchAllMessages(channel) {
   const messages = [];
   let before;
@@ -183,10 +222,14 @@ async function buildTranscript(channel, metadata, closedBy) {
   const serializedMessages = [];
 
   for (const message of messages) {
+    if (shouldSkipTranscriptMessage(message)) {
+      continue;
+    }
+
     const attachments = (await Promise.all(
       [...message.attachments.values()].map(async (attachment) => {
         if (!attachment.contentType?.startsWith("image/")) {
-          return null;
+          return serializeAttachment(attachment);
         }
 
         let storage = null;
@@ -202,7 +245,7 @@ async function buildTranscript(channel, metadata, closedBy) {
           console.error(`[tickets] Falha ao enviar anexo ${attachment.id} para o R2.`, error);
         }
 
-        return storage ? serializeAttachment(attachment, storage) : null;
+        return storage ? serializeAttachment(attachment, storage) : serializeAttachment(attachment);
       })
     )).filter(Boolean);
 

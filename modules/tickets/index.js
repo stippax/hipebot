@@ -785,7 +785,19 @@ async function closeTicket(interaction, client, config, options = {}) {
 
   closingTicketIds.add(channel.id);
 
-  const sendStatusMessage = (content) => interaction.followUp({ content }).catch(() => {});
+  const progressMessage = await interaction.followUp({
+    content: shouldSaveTranscript
+      ? "Salvando historico e anexos do ticket. Aguarde..."
+      : "Fechando ticket. Aguarde..."
+  }).catch(() => null);
+
+  const updateStatusMessage = (content) => {
+    if (progressMessage) {
+      return progressMessage.edit({ content }).catch(() => {});
+    }
+
+    return interaction.followUp({ content }).catch(() => {});
+  };
 
   let transcript;
   let access;
@@ -832,12 +844,12 @@ async function closeTicket(interaction, client, config, options = {}) {
   } catch (error) {
     console.error("[tickets] Falha ao gerar historico do ticket.", error);
 
-    await sendStatusMessage("Nao foi possivel salvar o historico deste ticket. O canal nao foi apagado.");
+    await updateStatusMessage("Nao foi possivel salvar o historico deste ticket. O canal nao foi apagado.");
     closingTicketIds.delete(channel.id);
     return;
   }
 
-  await sendStatusMessage(
+  await updateStatusMessage(
     shouldSaveTranscript
       ? "Ticket fechado. O historico foi salvo e este canal sera apagado em 10 segundos."
       : "Ticket fechado sem gerar historico. Este canal sera apagado em 10 segundos."
