@@ -85,6 +85,20 @@ function formatDate(value) {
   return `<t:${Math.floor(value.getTime() / 1000)}:F>`;
 }
 
+function parseHexColor(value, fallback) {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const normalized = value.trim();
+
+  if (!/^#[0-9a-fA-F]{6}$/.test(normalized)) {
+    return fallback;
+  }
+
+  return Number.parseInt(normalized.slice(1), 16);
+}
+
 function resolveRoles(config) {
   if (!Array.isArray(config.roles)) {
     return [];
@@ -113,9 +127,9 @@ function resolveConfig(config) {
     panelChannelId: isSnowflake(config.panelChannelId) ? config.panelChannelId : null,
     reviewChannelId: isSnowflake(config.reviewChannelId) ? config.reviewChannelId : null,
     reviewerRoleId: isSnowflake(config.reviewerRoleId) ? config.reviewerRoleId : null,
-    accentColor: Number.isInteger(config.accentColor) ? config.accentColor : 0x5865f2,
-    approveColor: Number.isInteger(config.approveColor) ? config.approveColor : 0x57f287,
-    denyColor: Number.isInteger(config.denyColor) ? config.denyColor : 0xed4245,
+    accentColor: parseHexColor(config.accentColor, 0x5865f2),
+    approveColor: parseHexColor(config.approveColor, 0x57f287),
+    denyColor: parseHexColor(config.denyColor, 0xed4245),
     bannerUrl: typeof config.bannerUrl === "string" && config.bannerUrl.trim() ? config.bannerUrl.trim() : null,
     roles: resolveRoles(config)
   };
@@ -343,14 +357,14 @@ async function fetchTextChannel(client, channelId) {
 
 async function ensurePanel(client, config) {
   if (!isConfigured(config)) {
-    console.warn("[setagem-membros] Configure panelChannelId, reviewChannelId e roles.");
+    console.warn("[member-setup] Configure panelChannelId, reviewChannelId e roles.");
     return;
   }
 
   const channel = await fetchTextChannel(client, config.panelChannelId);
 
   if (!channel) {
-    console.warn(`[setagem-membros] Canal de painel invalido: ${config.panelChannelId}.`);
+    console.warn(`[member-setup] Canal de painel invalido: ${config.panelChannelId}.`);
     return;
   }
 
@@ -644,7 +658,7 @@ async function register({ client, config }) {
 
   client.once(Events.ClientReady, async () => {
     await ensurePanel(client, resolvedConfig).catch((error) => {
-      console.error("[setagem-membros] Falha ao preparar painel de setagem.", error);
+      console.error("[member-setup] Falha ao preparar painel de setagem.", error);
     });
   });
 
@@ -658,7 +672,7 @@ async function register({ client, config }) {
         await interaction.showModal(buildModal(resolvedConfig));
       } catch (error) {
         if (error?.code !== 40060) {
-          console.error("[setagem-membros] Falha ao abrir modal.", error);
+          console.error("[member-setup] Falha ao abrir modal.", error);
         }
       }
 
@@ -669,7 +683,7 @@ async function register({ client, config }) {
       try {
         await handleModalSubmit(interaction, client, resolvedConfig);
       } catch (error) {
-        console.error("[setagem-membros] Falha ao enviar solicitacao.", error);
+        console.error("[member-setup] Falha ao enviar solicitacao.", error);
 
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
@@ -686,7 +700,7 @@ async function register({ client, config }) {
       try {
         await handleDecision(interaction, client, resolvedConfig, "approve");
       } catch (error) {
-        console.error("[setagem-membros] Falha ao aprovar setagem.", error);
+        console.error("[member-setup] Falha ao aprovar setagem.", error);
 
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
@@ -703,7 +717,7 @@ async function register({ client, config }) {
       try {
         await handleDecision(interaction, client, resolvedConfig, "deny");
       } catch (error) {
-        console.error("[setagem-membros] Falha ao negar setagem.", error);
+        console.error("[member-setup] Falha ao negar setagem.", error);
 
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({

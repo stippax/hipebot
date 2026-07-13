@@ -1,0 +1,11 @@
+{
+  "guildId": "",
+  "commandName": "cargo-preset",
+  "presets": [
+    {
+      "key": "cursobasico",
+      "label": "Curso Basico",
+      "roleIds": []
+    }
+  ]
+}

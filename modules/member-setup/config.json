@@ -2,9 +2,9 @@
   "panelChannelId": "1513991982182170876",
   "reviewChannelId": "1513992002994176020",
   "reviewerRoleId": "1513563951361691758",
-  "accentColor": 5793266,
-  "approveColor": 5763719,
-  "denyColor": 15548997,
+  "accentColor": "#2b3ed4",
+  "approveColor": "#57f287",
+  "denyColor": "#ed4245",
   "bannerUrl": "https://pub-ee60c3f232164d2ebd819cffe70d5d93.r2.dev/assets/prf/prf-atendimento.png",
   "roles": [
     {

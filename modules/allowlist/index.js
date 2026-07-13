@@ -35,6 +35,20 @@ function sanitizeIdentifier(value, fallback) {
   return `\`${identifier}\``;
 }
 
+function parseHexColor(value, fallback) {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const normalized = value.trim();
+
+  if (!/^#[0-9a-fA-F]{6}$/.test(normalized)) {
+    return fallback;
+  }
+
+  return Number.parseInt(normalized.slice(1), 16);
+}
+
 function resolveConfig(config) {
   return {
     panelChannelId: isSnowflake(config.panelChannelId) ? config.panelChannelId : null,
@@ -43,7 +57,7 @@ function resolveConfig(config) {
     buttonLabel: config.buttonLabel || "🔶 Iniciar Allowlist",
     allowlistUrl: config.allowlistUrl || "http://localhost:3000/allowlist",
     bannerUrl: config.bannerUrl || null,
-    accentColor: Number.isInteger(config.accentColor) ? config.accentColor : 0xff8c1a,
+    accentColor: parseHexColor(config.accentColor, 0xff8c1a),
     mysqlUrl: process.env.ALLOWLIST_MYSQL_URL || process.env.MYSQL_URL || process.env.MYSQL_CONNECTION_STRING || null,
     mysqlTable: config.mysqlTable || process.env.ALLOWLIST_MYSQL_TABLE || "accounts",
     tokenColumn: config.tokenColumn || process.env.ALLOWLIST_TOKEN_COLUMN || "Token",
@@ -55,7 +69,7 @@ function resolveConfig(config) {
 
 function getPool(config) {
   if (!config.mysqlUrl) {
-    throw new Error("MYSQL_URL nao foi configurada para o modulo iniciarallowlist.");
+    throw new Error("MYSQL_URL nao foi configurada para o modulo allowlist.");
   }
 
   if (!mysql) {
@@ -203,14 +217,14 @@ function messageHasAllowlistButton(message) {
 
 async function ensurePanel(client, config) {
   if (!config.panelChannelId) {
-    console.warn("[iniciarallowlist] panelChannelId nao configurado.");
+    console.warn("[allowlist] panelChannelId nao configurado.");
     return;
   }
 
   const channel = await client.channels.fetch(config.panelChannelId).catch(() => null);
 
   if (!channel || !channel.isTextBased()) {
-    console.warn(`[iniciarallowlist] Canal de painel invalido: ${config.panelChannelId}.`);
+    console.warn(`[allowlist] Canal de painel invalido: ${config.panelChannelId}.`);
     return;
   }
 
@@ -291,7 +305,7 @@ async function handleAllowlistSubmit(interaction, config) {
 
     if (member?.manageable) {
       await member.setNickname(nickname, "Allowlist iniciada").catch((error) => {
-        console.warn("[iniciarallowlist] Falha ao renomear membro.", error);
+        console.warn("[allowlist] Falha ao renomear membro.", error);
       });
     }
 
@@ -309,7 +323,7 @@ async function handleAllowlistSubmit(interaction, config) {
       flags: MessageFlags.IsComponentsV2
     });
   } catch (error) {
-    console.error("[iniciarallowlist] Falha ao processar token.", error);
+    console.error("[allowlist] Falha ao processar token.", error);
     await interaction.editReply("Falha ao consultar o banco de dados da cidade.");
   }
 }
@@ -319,7 +333,7 @@ async function register({ client, config }) {
 
   client.once(Events.ClientReady, async () => {
     await ensurePanel(client, resolvedConfig).catch((error) => {
-      console.error("[iniciarallowlist] Falha ao preparar painel de allowlist.", error);
+      console.error("[allowlist] Falha ao preparar painel de allowlist.", error);
     });
   });
 

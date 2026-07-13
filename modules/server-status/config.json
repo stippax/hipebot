@@ -11,7 +11,8 @@
   "timezone": "America/Sao_Paulo",
   "bannerUrl": "https://media.discordapp.net/attachments/1513993233812820162/1513995484820148244/allowlist.png",
   "thumbnailUrl": "https://media.discordapp.net/attachments/1513993233812820162/1514005804926243017/188.png",
-  "accentColor": 16747546,
+  "statusColor": "#57f287",
+  "accentColor": "#ff8c1a",
   "buttons": [
     {
       "label": "🔶 Conectar no Servidor",

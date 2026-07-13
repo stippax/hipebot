@@ -161,7 +161,7 @@ function findTicketType(config, value) {
 
 function buildPanelCard(config) {
   const container = new ContainerBuilder()
-    .setAccentColor(0x5865f2)
+    .setAccentColor(0x2b3ed4)
     .addSectionComponents(
       new SectionBuilder()
         .addTextDisplayComponents(
@@ -520,7 +520,7 @@ function buildTranscriptEmbed({ transcript, password, url, includePassword }) {
   }
 
   const embed = new EmbedBuilder()
-    .setColor(0x5865f2)
+    .setColor(0x2b3ed4)
     .setTitle("Historico de ticket gerado")
     .setDescription("O historico desta conversa foi salvo e pode ser acessado pelo botao abaixo.")
     .addFields(fields)
@@ -557,7 +557,7 @@ function buildClosedWithoutTranscriptEmbed({ channelName, ownerTag, ownerId, own
   }
 
   const embed = new EmbedBuilder()
-    .setColor(0x5865f2)
+    .setColor(0x2b3ed4)
     .setTitle("Ticket fechado sem historico")
     .setDescription("Este ticket foi encerrado sem gerar transcript.")
     .addFields(fields)

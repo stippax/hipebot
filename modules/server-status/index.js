@@ -32,13 +32,27 @@ function isValidUrl(value) {
   }
 }
 
+function parseHexColor(value, fallback) {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const normalized = value.trim();
+
+  if (!/^#[0-9a-fA-F]{6}$/.test(normalized)) {
+    return fallback;
+  }
+
+  return Number.parseInt(normalized.slice(1), 16);
+}
+
 function resolveConfig(config) {
   return {
     panelChannelId: isSnowflake(config.panelChannelId) ? config.panelChannelId : null,
     cityName: config.cityName || "EUFORIA ROLEPLAY",
     subtitle: config.subtitle || "Acompanhe o status da cidade e use os atalhos abaixo para entrar, visitar nossas redes ou acessar a loja.",
     statusLabel: config.statusLabel || "ONLINE",
-    statusColor: Number.isInteger(config.statusColor) ? config.statusColor : 0x57f287,
+    statusColor: parseHexColor(config.statusColor, 0x57f287),
     ipLabel: config.ipLabel || "IP FiveM",
     serverIp: config.serverIp || "connect euforiarp.gg",
     websiteLabel: config.websiteLabel || "Nosso website",
@@ -47,7 +61,7 @@ function resolveConfig(config) {
     timezone: config.timezone || "America/Sao_Paulo",
     bannerUrl: config.bannerUrl || null,
     thumbnailUrl: config.thumbnailUrl || null,
-    accentColor: Number.isInteger(config.accentColor) ? config.accentColor : 0x1f6fff,
+    accentColor: parseHexColor(config.accentColor, 0x1f6fff),
     buttons: Array.isArray(config.buttons) ? config.buttons.filter((button) => isValidUrl(button.url)) : []
   };
 }
@@ -195,14 +209,14 @@ function buildPayload(config) {
 
 async function fetchPanelMessage(client, config) {
   if (!config.panelChannelId) {
-    console.warn("[status-servidor] panelChannelId nao configurado.");
+    console.warn("[server-status] panelChannelId nao configurado.");
     return null;
   }
 
   const channel = await client.channels.fetch(config.panelChannelId).catch(() => null);
 
   if (!channel || !channel.isTextBased()) {
-    console.warn(`[status-servidor] Canal de painel invalido: ${config.panelChannelId}.`);
+    console.warn(`[server-status] Canal de painel invalido: ${config.panelChannelId}.`);
     return null;
   }
 
@@ -228,7 +242,7 @@ async function updatePanel(client, config, state) {
   }
 
   state.message = await state.message.edit(buildPayload(config)).catch(async (error) => {
-    console.error("[status-servidor] Falha ao atualizar painel de status.", error);
+    console.error("[server-status] Falha ao atualizar painel de status.", error);
     return fetchPanelMessage(client, config);
   });
 }
@@ -242,12 +256,12 @@ async function register({ client, config }) {
 
   client.once(Events.ClientReady, async () => {
     await updatePanel(client, resolvedConfig, state).catch((error) => {
-      console.error("[status-servidor] Falha ao preparar painel de status.", error);
+      console.error("[server-status] Falha ao preparar painel de status.", error);
     });
 
     state.interval = setInterval(() => {
       updatePanel(client, resolvedConfig, state).catch((error) => {
-        console.error("[status-servidor] Falha ao atualizar painel de status.", error);
+        console.error("[server-status] Falha ao atualizar painel de status.", error);
       });
     }, UPDATE_INTERVAL_MS);
   });

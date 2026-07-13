@@ -162,7 +162,7 @@ Observacoes:
 
 ## Modulo de setagem de membros
 
-O modulo `setagem-membros` cria um fluxo simples de aprovacao manual:
+O modulo `member-setup` cria um fluxo simples de aprovacao manual:
 
 - o bot publica ou atualiza automaticamente um painel com o botao `Iniciar Setagem`
 - o membro abre um modal com `Nome`, `ID` e um `dropdown` de cargos
@@ -170,7 +170,7 @@ O modulo `setagem-membros` cria um fluxo simples de aprovacao manual:
 - ao aceitar, o bot entrega o cargo selecionado e tenta renomear o membro para o padrao `[SIGLA] Nome | ID`
 - ao negar, o bot expulsa o membro do servidor
 
-Configure em `modules/setagem-membros/config.json`:
+Configure em `modules/member-setup/config.json`:
 
 - `panelChannelId`: canal onde o painel inicial sera enviado
 - `reviewChannelId`: canal onde a equipe revisa as solicitacoes
@@ -186,6 +186,19 @@ Observacoes:
 - o bot precisa de `Kick Members` para negar e expulsar membros
 - a hierarquia do bot deve ficar acima dos cargos que ele vai entregar
 - `Nome` e `ID` sao limitados no modal para ajudar a caber no nickname padrao
+
+## Modulo de presets de cargos
+
+O modulo `role-presets` aplica varios cargos de uma vez em um membro usando um preset salvo no config.
+
+Configure em `modules/role-presets/config.json`:
+
+- `guildId`: servidor onde o slash command sera registrado rapidamente
+- `commandName`: nome do comando slash, como `cargo-preset`
+- `presets`: lista de presets disponiveis
+- `presets[].key`: identificador usado internamente no comando
+- `presets[].label`: nome visivel no selector do slash command
+- `presets[].roleIds`: cargos que serao aplicados ao usar esse preset
 
 ## Criando novos modulos
 
