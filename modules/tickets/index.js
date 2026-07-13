@@ -23,10 +23,13 @@ const TICKET_TYPE_SELECT_ID = "tickets:type-select";
 const CLOSE_TICKET_BUTTON_ID = "tickets:close";
 const STAFF_MENU_BUTTON_ID = "tickets:staff-menu";
 const LEAVE_TICKET_BUTTON_ID = "tickets:leave";
+const CLAIM_TICKET_BUTTON_ID = "tickets:claim";
+const TRANSFER_TICKET_BUTTON_ID = "tickets:transfer";
 const ADD_MEMBER_BUTTON_ID = "tickets:add-member";
 const REMOVE_MEMBER_BUTTON_ID = "tickets:remove-member";
 const ADD_MEMBER_SELECT_ID = "tickets:add-member-select";
 const REMOVE_MEMBER_SELECT_ID = "tickets:remove-member-select";
+const TRANSFER_TICKET_SELECT_ID = "tickets:transfer-select";
 const TICKET_TOPIC_PREFIX = "ticket-owner:";
 const closingTicketIds = new Set();
 
@@ -108,6 +111,10 @@ function buildTicketChannelName(member, config, ticketType) {
 
 function formatDate(value) {
   return `<t:${Math.floor(value.getTime() / 1000)}:F>`;
+}
+
+function buildTicketTopic({ ownerId, ticketType, createdAt, claimedById }) {
+  return `${TICKET_TOPIC_PREFIX}${ownerId || ""}|${ticketType || ""}|${createdAt || Date.now()}|${claimedById || ""}`;
 }
 
 function resolveTicketTypes(config) {
@@ -258,22 +265,38 @@ function buildTicketCard(member, config, ticketType) {
 }
 
 function buildTicketActionRows(config) {
-  return [
-    new ActionRowBuilder().addComponents(
-      new ButtonBuilder()
-        .setCustomId(STAFF_MENU_BUTTON_ID)
-        .setLabel(config.staffMenuButtonLabel || "Menu Staff")
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId(LEAVE_TICKET_BUTTON_ID)
-        .setLabel(config.leaveTicketButtonLabel || "Sair do Ticket")
-        .setStyle(ButtonStyle.Secondary),
-      new ButtonBuilder()
-        .setCustomId(CLOSE_TICKET_BUTTON_ID)
-        .setLabel(config.closeButtonLabel || "Fechar Ticket")
-        .setStyle(ButtonStyle.Danger)
-    )
+  const buttons = [
+    new ButtonBuilder()
+      .setCustomId(STAFF_MENU_BUTTON_ID)
+      .setLabel(config.staffMenuButtonLabel || "Menu Staff")
+      .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(LEAVE_TICKET_BUTTON_ID)
+      .setLabel(config.leaveTicketButtonLabel || "Sair do Ticket")
+      .setStyle(ButtonStyle.Secondary)
   ];
+
+  if (config.staffRoleId) {
+    buttons.push(
+      new ButtonBuilder()
+        .setCustomId(CLAIM_TICKET_BUTTON_ID)
+        .setLabel(config.claimTicketButtonLabel || "Assumir Ticket")
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(TRANSFER_TICKET_BUTTON_ID)
+        .setLabel(config.transferTicketButtonLabel || "Transferir Ticket")
+        .setStyle(ButtonStyle.Secondary)
+    );
+  }
+
+  buttons.push(
+    new ButtonBuilder()
+      .setCustomId(CLOSE_TICKET_BUTTON_ID)
+      .setLabel(config.closeButtonLabel || "Fechar Ticket")
+      .setStyle(ButtonStyle.Danger)
+  );
+
+  return [new ActionRowBuilder().addComponents(...buttons)];
 }
 
 function isConfigured(config) {
@@ -293,7 +316,8 @@ function getTicketMetadata(channel) {
   return {
     ownerId: parts[0] || null,
     ticketType: parts[1] || null,
-    createdAt: Number(parts[2]) || null
+    createdAt: Number(parts[2]) || null,
+    claimedById: isSnowflake(parts[3]) ? parts[3] : null
   };
 }
 
@@ -326,6 +350,18 @@ function buildMemberSelect(customId, placeholder) {
       new UserSelectMenuBuilder()
         .setCustomId(customId)
         .setPlaceholder(placeholder)
+        .setMinValues(1)
+        .setMaxValues(1)
+    )
+  ];
+}
+
+function buildTransferSelect() {
+  return [
+    new ActionRowBuilder().addComponents(
+      new UserSelectMenuBuilder()
+        .setCustomId(TRANSFER_TICKET_SELECT_ID)
+        .setPlaceholder("Selecione o staff que vai receber o ticket")
         .setMinValues(1)
         .setMaxValues(1)
     )
@@ -441,14 +477,24 @@ function buildTranscriptLinkButton(url) {
 }
 
 function buildTranscriptEmbed({ transcript, password, url, includePassword }) {
+  const fields = [
+    { name: "Ticket", value: `#${truncate(transcript.channelName, 1000)}`, inline: true },
+    { name: "Mensagens", value: String(transcript.messages.length), inline: true }
+  ];
+
+  if (transcript.claimedBy?.tag) {
+    fields.push({
+      name: "Atendido por",
+      value: transcript.claimedBy.tag,
+      inline: true
+    });
+  }
+
   const embed = new EmbedBuilder()
     .setColor(0x5865f2)
     .setTitle("Historico de ticket gerado")
     .setDescription("O historico desta conversa foi salvo e pode ser acessado pelo botao abaixo.")
-    .addFields(
-      { name: "Ticket", value: `#${truncate(transcript.channelName, 1000)}`, inline: true },
-      { name: "Mensagens", value: String(transcript.messages.length), inline: true }
-    )
+    .addFields(fields)
     .setTimestamp(new Date(transcript.closedAt));
 
   if (includePassword) {
@@ -557,7 +603,12 @@ async function createTicket(interaction, config, ticketType) {
     name: channelName,
     type: ChannelType.GuildText,
     parent: config.categoryId,
-    topic: `${TICKET_TOPIC_PREFIX}${interaction.user.id}|${ticketType.value}|${Date.now()}`,
+    topic: buildTicketTopic({
+      ownerId: interaction.user.id,
+      ticketType: ticketType.value,
+      createdAt: Date.now(),
+      claimedById: null
+    }),
     permissionOverwrites
   });
 
@@ -613,8 +664,6 @@ async function closeTicket(interaction, client, config) {
 
   let transcript;
   let access;
-  let dmStats = null;
-
   try {
     transcript = await buildTranscript(channel, getTicketMetadata(channel), interaction.user);
     access = await saveTranscript(config, transcript);
@@ -631,7 +680,7 @@ async function closeTicket(interaction, client, config) {
       components: access.url ? [buildTranscriptLinkButton(access.url)] : []
     });
 
-    dmStats = await notifyTranscriptMembers(client, interaction.guild, transcript, access.password, access.url);
+    await notifyTranscriptMembers(client, interaction.guild, transcript, access.password, access.url);
   } catch (error) {
     console.error("[tickets] Falha ao gerar historico do ticket.", error);
 
@@ -640,13 +689,7 @@ async function closeTicket(interaction, client, config) {
     return;
   }
 
-  await sendStatusMessage(
-    [
-      "Ticket fechado. O historico foi salvo e este canal sera apagado em 5 segundos.",
-      access.url ? `Link: ${access.url}` : null,
-      dmStats ? `DMs enviadas: ${dmStats.sent}/${dmStats.total}.` : null
-    ].filter(Boolean).join("\n")
-  );
+  await sendStatusMessage("Ticket fechado. O historico foi salvo e este canal sera apagado em 10 segundos.");
 
   setTimeout(async () => {
     await channel.delete("Ticket encerrado").catch((error) => {
@@ -655,7 +698,7 @@ async function closeTicket(interaction, client, config) {
       }
     });
     closingTicketIds.delete(channel.id);
-  }, 5000);
+  }, 10000);
 }
 
 async function openStaffMenu(interaction, config) {
@@ -683,6 +726,163 @@ async function openStaffMenu(interaction, config) {
     content: "Menu Staff deste ticket.",
     components: buildStaffMenuComponents(config)
   });
+}
+
+async function updateTicketClaim(channel, metadata, claimedById) {
+  await channel.setTopic(buildTicketTopic({
+    ownerId: metadata?.ownerId,
+    ticketType: metadata?.ticketType,
+    createdAt: metadata?.createdAt,
+    claimedById
+  }));
+}
+
+async function claimTicket(interaction, client, config) {
+  const deferred = await deferInteractionUpdate(interaction);
+
+  if (!deferred) {
+    return;
+  }
+
+  if (!isTicketChannel(interaction.channel) || !isStaffMember(interaction, config)) {
+    return;
+  }
+
+  const metadata = getTicketMetadata(interaction.channel);
+
+  if (metadata?.claimedById) {
+    if (metadata.claimedById === interaction.user.id) {
+      await interaction.followUp({
+        content: "Voce ja assumiu este ticket.",
+        flags: MessageFlags.Ephemeral
+      }).catch(() => {});
+      return;
+    }
+
+    await interaction.followUp({
+      content: "Este ticket ja foi assumido por outro membro da equipe.",
+      flags: MessageFlags.Ephemeral
+    }).catch(() => {});
+    return;
+  }
+
+  await updateTicketClaim(interaction.channel, metadata, interaction.user.id);
+
+  await interaction.channel.send({
+    content: `${interaction.user} assumiu este ticket.`
+  }).catch(() => {});
+
+  await sendTicketLog(
+    client,
+    interaction.guild,
+    config,
+    `${interaction.user} assumiu o ticket ${interaction.channel}.`
+  );
+}
+
+async function promptTransferTicket(interaction, config) {
+  const deferred = await deferEphemeralReply(interaction);
+
+  if (!deferred) {
+    return;
+  }
+
+  if (!isTicketChannel(interaction.channel)) {
+    await sendEphemeralResponse(interaction, {
+      content: "Este controle so pode ser usado em um canal de ticket."
+    });
+    return;
+  }
+
+  if (!isStaffMember(interaction, config)) {
+    await sendEphemeralResponse(interaction, {
+      content: "Apenas a equipe pode transferir tickets."
+    });
+    return;
+  }
+
+  const metadata = getTicketMetadata(interaction.channel);
+
+  if (!metadata?.claimedById) {
+    await sendEphemeralResponse(interaction, {
+      content: "Este ticket ainda nao foi assumido por nenhum staff."
+    });
+    return;
+  }
+
+  if (metadata.claimedById !== interaction.user.id) {
+    await sendEphemeralResponse(interaction, {
+      content: "Somente quem assumiu o ticket pode transferi-lo."
+    });
+    return;
+  }
+
+  await sendEphemeralResponse(interaction, {
+    content: "Selecione o staff que vai receber este ticket.",
+    components: buildTransferSelect()
+  });
+}
+
+async function transferTicket(interaction, client, config) {
+  const deferred = await deferInteractionUpdate(interaction);
+
+  if (!deferred) {
+    return;
+  }
+
+  if (!isTicketChannel(interaction.channel) || !isStaffMember(interaction, config)) {
+    return;
+  }
+
+  const metadata = getTicketMetadata(interaction.channel);
+
+  if (!metadata?.claimedById || metadata.claimedById !== interaction.user.id) {
+    await interaction.followUp({
+      content: "Somente quem assumiu o ticket pode transferi-lo.",
+      flags: MessageFlags.Ephemeral
+    }).catch(() => {});
+    return;
+  }
+
+  const userId = interaction.values[0];
+  const member = await interaction.guild.members.fetch(userId).catch(() => null);
+
+  if (!member) {
+    await interaction.followUp({
+      content: "Nao foi possivel encontrar este usuario no servidor.",
+      flags: MessageFlags.Ephemeral
+    }).catch(() => {});
+    return;
+  }
+
+  if (!config.staffRoleId || !member.roles.cache.has(config.staffRoleId)) {
+    await interaction.followUp({
+      content: "Voce so pode transferir o ticket para um membro com o cargo staff configurado.",
+      flags: MessageFlags.Ephemeral
+    }).catch(() => {});
+    return;
+  }
+
+  if (member.id === interaction.user.id) {
+    await interaction.followUp({
+      content: "Este ticket ja esta com voce.",
+      flags: MessageFlags.Ephemeral
+    }).catch(() => {});
+    return;
+  }
+
+  await updateTicketClaim(interaction.channel, metadata, member.id);
+
+  await interaction.channel.send({
+    content: `${interaction.user} transferiu este ticket para ${member}.`
+  }).catch(() => {});
+
+  await sendTicketLog(
+    client,
+    interaction.guild,
+    config,
+    `${interaction.user} transferiu o ticket ${interaction.channel} para ${member}.`
+  );
 }
 
 async function promptMemberSelection(interaction, config, mode) {
@@ -924,6 +1124,23 @@ async function register({ client, config }) {
       return;
     }
 
+    if (interaction.isUserSelectMenu() && interaction.customId === TRANSFER_TICKET_SELECT_ID) {
+      try {
+        await transferTicket(interaction, client, resolvedConfig);
+      } catch (error) {
+        console.error("[tickets] Falha ao transferir ticket.", error);
+
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: "Nao foi possivel transferir este ticket.",
+            flags: MessageFlags.Ephemeral
+          }).catch(() => {});
+        }
+      }
+
+      return;
+    }
+
     if (interaction.isButton() && interaction.customId === ADD_MEMBER_BUTTON_ID) {
       try {
         await promptMemberSelection(interaction, resolvedConfig, "add");
@@ -950,6 +1167,40 @@ async function register({ client, config }) {
         if (!interaction.replied && !interaction.deferred) {
           await interaction.reply({
             content: "Nao foi possivel abrir o seletor de remocao.",
+            flags: MessageFlags.Ephemeral
+          }).catch(() => {});
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.isButton() && interaction.customId === CLAIM_TICKET_BUTTON_ID) {
+      try {
+        await claimTicket(interaction, client, resolvedConfig);
+      } catch (error) {
+        console.error("[tickets] Falha ao assumir ticket.", error);
+
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: "Nao foi possivel assumir este ticket.",
+            flags: MessageFlags.Ephemeral
+          }).catch(() => {});
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.isButton() && interaction.customId === TRANSFER_TICKET_BUTTON_ID) {
+      try {
+        await promptTransferTicket(interaction, resolvedConfig);
+      } catch (error) {
+        console.error("[tickets] Falha ao abrir transferencia de ticket.", error);
+
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: "Nao foi possivel abrir a transferencia deste ticket.",
             flags: MessageFlags.Ephemeral
           }).catch(() => {});
         }

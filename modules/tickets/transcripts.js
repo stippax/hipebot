@@ -225,6 +225,9 @@ async function buildTranscript(channel, metadata, closedBy) {
     channelName: channel.name,
     ownerId: metadata?.ownerId || null,
     ticketType: metadata?.ticketType || null,
+    claimedBy: metadata?.claimedById
+      ? serializeUser(await channel.client.users.fetch(metadata.claimedById).catch(() => null))
+      : null,
     openedAt: metadata?.createdAt ? new Date(metadata.createdAt).toISOString() : null,
     closedAt: new Date().toISOString(),
     closedBy: serializeUser(closedBy),
