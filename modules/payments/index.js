@@ -257,7 +257,7 @@ function buildMarketplaceCard(config, amount, description, preference) {
 
 function buildPixPayload(amount, description) {
   const key = process.env.PIX_KEY;
-  const receiverName = process.env.PIX_RECEIVER_NAME || "LINEUP LABS";
+  const receiverName = process.env.PIX_RECEIVER_NAME || "HIPE STUDIO";
   const receiverCity = process.env.PIX_RECEIVER_CITY || "SAO PAULO";
 
   if (!key) {

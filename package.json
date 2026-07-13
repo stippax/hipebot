@@ -1,5 +1,5 @@
 {
-  "name": "lineup-labs-bot",
+  "name": "hipe-studio-bot",
   "version": "1.0.0",
   "description": "Bot modular para Discord com carregamento automatico de modulos.",
   "main": "src/index.js",

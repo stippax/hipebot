@@ -1,9 +1,9 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-title Lineup Labs Bot Local Start
+title HIPE Studio Bot Local Start
 
-echo Iniciando Lineup Labs Bot...
+echo Iniciando HIPE Studio Bot...
 echo.
 
 if not exist ".env.local" (

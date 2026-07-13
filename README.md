@@ -1,4 +1,4 @@
-# Lineup Labs Bot
+# HIPE Studio Bot
 
 Bot de Discord modular, pensado para crescer por pastas de modulo sem alterar a raiz do projeto.
 
@@ -156,7 +156,7 @@ Fluxo atual:
 Observacoes:
 
 - o Pix desta versao usa chave Pix local e gera um QR estatico com valor definido
-- `PIX_RECEIVER_NAME` e opcional; se nao informar, o bot usa `LINEUP LABS`
+- `PIX_RECEIVER_NAME` e opcional; se nao informar, o bot usa `HIPE STUDIO`
 - `PIX_RECEIVER_CITY` e opcional; se nao informar, o bot usa `SAO PAULO`
 - se depois voce quiser Pix dinamico via gateway, da para evoluir este modulo
 

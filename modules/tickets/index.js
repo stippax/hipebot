@@ -166,12 +166,13 @@ function resolveConfig(config) {
     ticketBannerUrl: typeof config.ticketBannerUrl === "string" && config.ticketBannerUrl.trim()
       ? config.ticketBannerUrl.trim()
       : null,
-    panelThumbnailUrl: typeof config.panelThumbnailUrl === "string" && config.panelThumbnailUrl.trim()
-      ? config.panelThumbnailUrl.trim()
-      : "https://cdn.discordapp.com/embed/avatars/0.png",
     ticketThumbnailUrl: typeof config.ticketThumbnailUrl === "string" && config.ticketThumbnailUrl.trim()
       ? config.ticketThumbnailUrl.trim()
-      : null,
+      : (
+        typeof config.panelThumbnailUrl === "string" && config.panelThumbnailUrl.trim()
+          ? config.panelThumbnailUrl.trim()
+          : "https://cdn.discordapp.com/embed/avatars/0.png"
+      ),
     panelBodyDescription: typeof config.panelBodyDescription === "string" && config.panelBodyDescription.trim()
       ? config.panelBodyDescription.trim()
       : null,
@@ -197,7 +198,7 @@ function buildPanelCard(config) {
         )
         .setThumbnailAccessory(
           new ThumbnailBuilder()
-            .setURL(config.panelThumbnailUrl)
+            .setURL(config.ticketThumbnailUrl)
             .setDescription("Painel de tickets")
         )
     )
@@ -257,7 +258,7 @@ function buildTicketCard(member, config, ticketType, options = {}) {
         )
         .setThumbnailAccessory(
           new ThumbnailBuilder()
-            .setURL(config.ticketThumbnailUrl || member.user.displayAvatarURL({ size: 256 }))
+            .setURL(member.user.displayAvatarURL({ size: 256 }))
             .setDescription(`Avatar de ${member.user.tag}`)
         )
     )
