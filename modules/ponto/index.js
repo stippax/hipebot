@@ -189,7 +189,10 @@ function buildActionRow(userId, isPaused) {
 function buildSessionEmbed(member, record, config) {
   const session = record.activeSession;
   const isPaused = session?.status === "paused";
-  const startedAtRelative = formatDiscordDate(session.startedAt, "R");
+  const workedMs = getWorkedMsForSession(session);
+  const workedDisplay = isPaused
+    ? formatDuration(workedMs)
+    : formatDiscordDate(Date.now() - workedMs, "R");
 
   return new EmbedBuilder()
     .setColor(config.embedColor)
@@ -199,7 +202,7 @@ function buildSessionEmbed(member, record, config) {
     .addFields(
       { name: "Status", value: isPaused ? "Pausado" : "Em andamento", inline: true },
       { name: "Inicio", value: formatDiscordDate(session.startedAt), inline: true },
-      { name: "Trabalhando ha", value: startedAtRelative, inline: true }
+      { name: "Trabalhando ha", value: workedDisplay, inline: true }
     )
     .setFooter({ text: `ID do membro: ${member.id}` })
     .setTimestamp(new Date());
