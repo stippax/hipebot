@@ -25,6 +25,8 @@ const STAFF_MENU_BUTTON_ID = "tickets:staff-menu";
 const LEAVE_TICKET_BUTTON_ID = "tickets:leave";
 const CLAIM_TICKET_BUTTON_ID = "tickets:claim";
 const TRANSFER_TICKET_BUTTON_ID = "tickets:transfer";
+const CONFIRM_CLOSE_WITH_TRANSCRIPT_BUTTON_ID = "tickets:close-with-transcript";
+const CONFIRM_CLOSE_WITHOUT_TRANSCRIPT_BUTTON_ID = "tickets:close-without-transcript";
 const ADD_MEMBER_BUTTON_ID = "tickets:add-member";
 const REMOVE_MEMBER_BUTTON_ID = "tickets:remove-member";
 const ADD_MEMBER_SELECT_ID = "tickets:add-member-select";
@@ -101,7 +103,7 @@ function normalizeChannelEmoji(value) {
 }
 
 function buildTicketChannelName(member, config, ticketType) {
-  const baseName = sanitizeChannelName(member.displayName || member.user.username) || "usuario";
+  const baseName = sanitizeChannelName(member.user.username) || "usuario";
   const category = ticketType.channelPrefix || sanitizeChannelName(config.ticketNamePrefix || "ticket") || "ticket";
   const emoji = normalizeChannelEmoji(ticketType.emoji);
   const prefix = emoji ? `${emoji}・${category}` : category;
@@ -276,26 +278,6 @@ function buildTicketActionRows(config) {
       .setStyle(ButtonStyle.Secondary)
   ];
 
-  if (config.staffRoleId) {
-    buttons.push(
-      new ButtonBuilder()
-        .setCustomId(CLAIM_TICKET_BUTTON_ID)
-        .setLabel(config.claimTicketButtonLabel || "Assumir Ticket")
-        .setStyle(ButtonStyle.Success),
-      new ButtonBuilder()
-        .setCustomId(TRANSFER_TICKET_BUTTON_ID)
-        .setLabel(config.transferTicketButtonLabel || "Transferir Ticket")
-        .setStyle(ButtonStyle.Secondary)
-    );
-  }
-
-  buttons.push(
-    new ButtonBuilder()
-      .setCustomId(CLOSE_TICKET_BUTTON_ID)
-      .setLabel(config.closeButtonLabel || "Fechar Ticket")
-      .setStyle(ButtonStyle.Danger)
-  );
-
   return [new ActionRowBuilder().addComponents(...buttons)];
 }
 
@@ -330,11 +312,7 @@ function isStaffMember(interaction, config) {
 }
 
 function canCloseTicket(interaction, config) {
-  const metadata = getTicketMetadata(interaction.channel);
-  const isOwner = interaction.user.id === metadata?.ownerId;
-  const isStaff = isStaffMember(interaction, config);
-
-  return isOwner || isStaff;
+  return isStaffMember(interaction, config);
 }
 
 function canLeaveTicket(interaction) {
@@ -372,12 +350,45 @@ function buildStaffMenuComponents(config) {
   return [
     new ActionRowBuilder().addComponents(
       new ButtonBuilder()
+        .setCustomId(CLAIM_TICKET_BUTTON_ID)
+        .setLabel(config.claimTicketButtonLabel || "Assumir Ticket")
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(TRANSFER_TICKET_BUTTON_ID)
+        .setLabel(config.transferTicketButtonLabel || "Transferir Ticket")
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
         .setCustomId(ADD_MEMBER_BUTTON_ID)
         .setLabel(config.addMemberButtonLabel || "Adicionar Membro")
-        .setStyle(ButtonStyle.Secondary),
+        .setStyle(ButtonStyle.Secondary)
+    ),
+    new ActionRowBuilder().addComponents(
       new ButtonBuilder()
         .setCustomId(REMOVE_MEMBER_BUTTON_ID)
         .setLabel(config.removeMemberButtonLabel || "Remover Membro")
+        .setStyle(ButtonStyle.Secondary),
+      new ButtonBuilder()
+        .setCustomId(CLOSE_TICKET_BUTTON_ID)
+        .setLabel(config.closeButtonLabel || "Fechar Ticket")
+        .setStyle(ButtonStyle.Danger)
+    )
+  ];
+}
+
+function buildCloseConfirmationComponents() {
+  return [
+    new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(CONFIRM_CLOSE_WITH_TRANSCRIPT_BUTTON_ID)
+        .setLabel("Fechar com Historico")
+        .setStyle(ButtonStyle.Success),
+      new ButtonBuilder()
+        .setCustomId(CONFIRM_CLOSE_WITHOUT_TRANSCRIPT_BUTTON_ID)
+        .setLabel("Fechar sem Historico")
+        .setStyle(ButtonStyle.Danger),
+      new ButtonBuilder()
+        .setCustomId(STAFF_MENU_BUTTON_ID)
+        .setLabel("Voltar")
         .setStyle(ButtonStyle.Secondary)
     )
   ];
@@ -486,6 +497,14 @@ function buildTranscriptEmbed({ transcript, password, url, includePassword }) {
     fields.push({
       name: "Atendido por",
       value: transcript.claimedBy.tag,
+      inline: true
+    });
+  }
+
+  if (transcript.closedBy?.tag) {
+    fields.push({
+      name: "Fechado por",
+      value: transcript.closedBy.tag,
       inline: true
     });
   }
@@ -627,8 +646,9 @@ async function createTicket(interaction, config, ticketType) {
   });
 }
 
-async function closeTicket(interaction, client, config) {
+async function closeTicket(interaction, client, config, options = {}) {
   const channel = interaction.channel;
+  const shouldSaveTranscript = options.saveTranscript !== false;
 
   if (!isTicketChannel(channel)) {
     await sendEphemeralResponse(interaction, {
@@ -665,22 +685,31 @@ async function closeTicket(interaction, client, config) {
   let transcript;
   let access;
   try {
-    transcript = await buildTranscript(channel, getTicketMetadata(channel), interaction.user);
-    access = await saveTranscript(config, transcript);
+    if (shouldSaveTranscript) {
+      transcript = await buildTranscript(channel, getTicketMetadata(channel), interaction.user);
+      access = await saveTranscript(config, transcript);
 
-    await sendTicketLog(client, interaction.guild, config, {
-      embeds: [
-        buildTranscriptEmbed({
-          transcript,
-          password: access.password,
-          url: access.url,
-          includePassword: true
-        })
-      ],
-      components: access.url ? [buildTranscriptLinkButton(access.url)] : []
-    });
+      await sendTicketLog(client, interaction.guild, config, {
+        embeds: [
+          buildTranscriptEmbed({
+            transcript,
+            password: access.password,
+            url: access.url,
+            includePassword: true
+          })
+        ],
+        components: access.url ? [buildTranscriptLinkButton(access.url)] : []
+      });
 
-    await notifyTranscriptMembers(client, interaction.guild, transcript, access.password, access.url);
+      await notifyTranscriptMembers(client, interaction.guild, transcript, access.password, access.url);
+    } else {
+      await sendTicketLog(
+        client,
+        interaction.guild,
+        config,
+        `${interaction.user} fechou o ticket ${interaction.channel} sem gerar historico.`
+      );
+    }
   } catch (error) {
     console.error("[tickets] Falha ao gerar historico do ticket.", error);
 
@@ -689,7 +718,11 @@ async function closeTicket(interaction, client, config) {
     return;
   }
 
-  await sendStatusMessage("Ticket fechado. O historico foi salvo e este canal sera apagado em 10 segundos.");
+  await sendStatusMessage(
+    shouldSaveTranscript
+      ? "Ticket fechado. O historico foi salvo e este canal sera apagado em 10 segundos."
+      : "Ticket fechado sem gerar historico. Este canal sera apagado em 10 segundos."
+  );
 
   setTimeout(async () => {
     await channel.delete("Ticket encerrado").catch((error) => {
@@ -725,6 +758,33 @@ async function openStaffMenu(interaction, config) {
   await sendEphemeralResponse(interaction, {
     content: "Menu Staff deste ticket.",
     components: buildStaffMenuComponents(config)
+  });
+}
+
+async function promptCloseTicket(interaction, config) {
+  const deferred = await deferEphemeralReply(interaction);
+
+  if (!deferred) {
+    return;
+  }
+
+  if (!isTicketChannel(interaction.channel)) {
+    await sendEphemeralResponse(interaction, {
+      content: "Este controle so pode ser usado em um canal de ticket."
+    });
+    return;
+  }
+
+  if (!canCloseTicket(interaction, config)) {
+    await sendEphemeralResponse(interaction, {
+      content: "Apenas a equipe pode fechar este atendimento."
+    });
+    return;
+  }
+
+  await sendEphemeralResponse(interaction, {
+    content: "Escolha como deseja fechar este ticket.",
+    components: buildCloseConfirmationComponents()
   });
 }
 
@@ -928,6 +988,14 @@ async function leaveTicket(interaction, client, config) {
     return;
   }
 
+  if (isStaffMember(interaction, config)) {
+    await interaction.reply({
+      content: "Membros da equipe nao podem sair do ticket por este botao.",
+      flags: MessageFlags.Ephemeral
+    });
+    return;
+  }
+
   if (!canLeaveTicket(interaction)) {
     await interaction.reply({
       content: "Somente o criador do ticket ou membros adicionados manualmente podem sair deste ticket.",
@@ -937,6 +1005,10 @@ async function leaveTicket(interaction, client, config) {
   }
 
   await interaction.channel.permissionOverwrites.delete(interaction.user.id).catch(() => {});
+
+  await interaction.channel.send({
+    content: `${interaction.user} saiu do ticket.`
+  }).catch(() => {});
 
   await interaction.reply({
     content: "Voce saiu deste ticket.",
@@ -1209,6 +1281,71 @@ async function register({ client, config }) {
       return;
     }
 
+    if (interaction.isButton() && interaction.customId === CLOSE_TICKET_BUTTON_ID) {
+      try {
+        await promptCloseTicket(interaction, resolvedConfig);
+      } catch (error) {
+        console.error("[tickets] Falha ao abrir fechamento de ticket.", error);
+
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: "Nao foi possivel abrir as opcoes de fechamento.",
+            flags: MessageFlags.Ephemeral
+          }).catch(() => {});
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.isButton() && interaction.customId === CONFIRM_CLOSE_WITH_TRANSCRIPT_BUTTON_ID) {
+      try {
+        await closeTicket(interaction, client, resolvedConfig, { saveTranscript: true });
+      } catch (error) {
+        console.error("[tickets] Falha ao fechar ticket com historico.", error);
+
+        closingTicketIds.delete(interaction.channelId);
+
+        if (interaction.deferred || interaction.replied) {
+          await interaction.followUp({
+            content: "Nao foi possivel fechar este ticket agora.",
+            flags: MessageFlags.Ephemeral
+          }).catch(() => {});
+        } else {
+          await interaction.reply({
+            content: "Nao foi possivel fechar este ticket agora.",
+            flags: MessageFlags.Ephemeral
+          }).catch(() => {});
+        }
+      }
+
+      return;
+    }
+
+    if (interaction.isButton() && interaction.customId === CONFIRM_CLOSE_WITHOUT_TRANSCRIPT_BUTTON_ID) {
+      try {
+        await closeTicket(interaction, client, resolvedConfig, { saveTranscript: false });
+      } catch (error) {
+        console.error("[tickets] Falha ao fechar ticket sem historico.", error);
+
+        closingTicketIds.delete(interaction.channelId);
+
+        if (interaction.deferred || interaction.replied) {
+          await interaction.followUp({
+            content: "Nao foi possivel fechar este ticket agora.",
+            flags: MessageFlags.Ephemeral
+          }).catch(() => {});
+        } else {
+          await interaction.reply({
+            content: "Nao foi possivel fechar este ticket agora.",
+            flags: MessageFlags.Ephemeral
+          }).catch(() => {});
+        }
+      }
+
+      return;
+    }
+
     if (interaction.isButton() && interaction.customId === STAFF_MENU_BUTTON_ID) {
       try {
         await openStaffMenu(interaction, resolvedConfig);
@@ -1241,28 +1378,6 @@ async function register({ client, config }) {
       }
 
       return;
-    }
-
-    if (interaction.isButton() && interaction.customId === CLOSE_TICKET_BUTTON_ID) {
-      try {
-        await closeTicket(interaction, client, resolvedConfig);
-      } catch (error) {
-        console.error("[tickets] Falha ao fechar ticket.", error);
-
-        closingTicketIds.delete(interaction.channelId);
-
-        if (interaction.deferred || interaction.replied) {
-          await interaction.followUp({
-            content: "Nao foi possivel fechar este ticket agora.",
-            flags: MessageFlags.Ephemeral
-          }).catch(() => {});
-        } else {
-          await interaction.reply({
-            content: "Nao foi possivel fechar este ticket agora.",
-            flags: MessageFlags.Ephemeral
-          }).catch(() => {});
-        }
-      }
     }
   });
 }
