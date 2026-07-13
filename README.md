@@ -24,8 +24,9 @@ DISCORD_TOKEN=seu_token
 3. Para teste local no Windows, copie `.env.local.example` para `.env.local` e preencha o token local.
 
 4. Configure os canais de log em `modules/member-logs/config.json`.
+5. Se for usar log de call, configure `modules/call-logs/config.json`.
 
-5. Inicie o bot:
+6. Inicie o bot:
 
 ```bash
 npm start
@@ -71,6 +72,36 @@ O modulo `member-logs` envia logs de:
 - saida em `leaveChannelId`
 
 Ele usa componentes v2 do Discord para montar um card visual no canal, em vez de um embed simples.
+
+## Modulo de log de call
+
+O modulo `call-logs` envia logs quando um membro:
+
+- entra em uma call
+- sai de uma call
+- troca de call, se `logMoves` estiver ativo
+
+Configure em `modules/call-logs/config.json`:
+
+- `logChannelId`: canal onde os logs de voz serao enviados
+- `ignoreBots`: se `true`, ignora bots nos eventos
+- `logMoves`: se `true`, registra mudanca entre canais de voz
+- `bannerUrl`: banner opcional usado no card visual
+
+## Modulo de ponto
+
+O modulo `ponto` cria um sistema simples de bater ponto com persistencia local em JSON.
+
+Comandos:
+
+- `/bateponto`: abre um ponto e envia um embed com botoes de `Pausar` ou `Finalizar`
+- `/ranking ponto`: mostra os 10 membros com mais tempo acumulado
+- `/ponto usuario:@membro`: mostra as informacoes de ponto do membro marcado
+
+Configure em `modules/ponto/config.json`:
+
+- `guildId`: servidor onde os slash commands serao registrados rapidamente
+- `allowedChannelId`: se preencher, limita o `/bateponto` a esse canal
 
 ## Modulo de tickets
 

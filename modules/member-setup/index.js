@@ -26,12 +26,12 @@ const DENY_PREFIX = "setagem-membros:deny";
 const NAME_INPUT_CUSTOM_ID = "setagem-membros:nome";
 const PLAYER_ID_INPUT_CUSTOM_ID = "setagem-membros:id";
 const ROLE_SELECT_CUSTOM_ID = "setagem-membros:cargo";
-const PANEL_TITLE = "Setagem de Membros";
-const PANEL_DESCRIPTION = "Clique no botao abaixo para iniciar sua setagem.";
+const PANEL_TITLE = "Registro de Membros";
+const PANEL_DESCRIPTION = "Clique no botao abaixo para iniciar seu registro.";
 const PANEL_FOOTER = "Preencha nome, ID e o cargo desejado para enviar sua solicitacao.";
-const BUTTON_LABEL = "🔹Iniciar Setagem";
-const MODAL_TITLE = "Formulario de Setagem";
-const REVIEW_TITLE = "Nova solicitacao de setagem";
+const BUTTON_LABEL = "🔹Iniciar Registro";
+const MODAL_TITLE = "Formulario de Registro";
+const REVIEW_TITLE = "Nova solicitacao de registro";
 const REVIEW_FOOTER = "Revise os dados e escolha aceitar ou negar.";
 const MAX_NAME_LENGTH = 20;
 const MAX_PLAYER_ID_LENGTH = 8;
@@ -106,14 +106,15 @@ function resolveRoles(config) {
 
   return config.roles
     .filter((role) => role && typeof role === "object" && isSnowflake(role.roleId))
-    .map((role) => {
+    .map((role, index) => {
       const grantRoleIds = Array.isArray(role.grantRoleIds)
         ? role.grantRoleIds.filter(isSnowflake)
         : [];
 
       return {
+        key: `role-${index}-${role.roleId}`,
         roleId: role.roleId,
-        grantRoleIds: grantRoleIds.length ? [...new Set(grantRoleIds)] : [role.roleId],
+        grantRoleIds: [...new Set([role.roleId, ...grantRoleIds])],
         label: truncate(role.label || role.name || "Cargo", 100),
         shortLabel: truncate(role.shortLabel || role.abbreviation || role.label || role.name || "Cargo", 20),
         description: role.description ? truncate(role.description, 100) : undefined,
@@ -140,7 +141,7 @@ function isConfigured(config) {
 }
 
 function findConfiguredRole(config, roleId) {
-  return config.roles.find((role) => role.roleId === roleId) || null;
+  return config.roles.find((role) => role.key === roleId || role.roleId === roleId) || null;
 }
 
 function buildPanel(config) {
@@ -212,7 +213,7 @@ function buildModal(config) {
             .addOptions(
               config.roles.map((role) => ({
                 label: role.label,
-                value: role.roleId,
+                value: role.key,
                 description: role.description,
                 emoji: role.emoji
               }))
@@ -232,7 +233,7 @@ function parseDecisionCustomId(customId, prefix) {
 
   const [, , guildId, memberId, roleId] = customId.split(":");
 
-  if (!isSnowflake(guildId) || !isSnowflake(memberId) || !isSnowflake(roleId)) {
+  if (!isSnowflake(guildId) || !isSnowflake(memberId) || typeof roleId !== "string") {
     return null;
   }
 
@@ -278,22 +279,13 @@ function buildReviewCard(config, payload) {
     )
     .addSeparatorComponents(new SeparatorBuilder());
 
-  if (config.bannerUrl) {
-    container.addMediaGalleryComponents(
-      new MediaGalleryBuilder().addItems(
-        new MediaGalleryItemBuilder()
-          .setURL(config.bannerUrl)
-      )
-    );
-  }
-
   container.addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
         buildReviewDetails({
           member,
           nome: payload.nome,
           playerId: payload.playerId,
-          roleId: payload.roleId,
+          roleId: payload.displayRoleId || payload.roleId,
           roleLabel: payload.roleLabel,
           reviewer: payload.reviewer,
           decidedAt: payload.decidedAt,
@@ -317,6 +309,14 @@ function normalizeMemberName(value) {
 
 function normalizePlayerId(value) {
   return truncate(String(value || "").replace(/\s+/g, "").trim(), MAX_PLAYER_ID_LENGTH);
+}
+
+function isValidMemberName(value) {
+  return /^[\p{L}\s]+$/u.test(value);
+}
+
+function isValidPlayerId(value) {
+  return /^\d+$/.test(value);
 }
 
 function buildReviewMessage(config, payload, pending) {
@@ -417,6 +417,22 @@ async function handleModalSubmit(interaction, client, config) {
   const [roleId] = interaction.fields.getStringSelectValues(ROLE_SELECT_CUSTOM_ID);
   const configuredRole = findConfiguredRole(config, roleId);
 
+  if (!nome || !isValidMemberName(nome)) {
+    await interaction.reply({
+      content: "O nome deve conter apenas letras e espacos.",
+      flags: MessageFlags.Ephemeral
+    });
+    return;
+  }
+
+  if (!playerId || !isValidPlayerId(playerId)) {
+    await interaction.reply({
+      content: "O ID deve conter apenas numeros.",
+      flags: MessageFlags.Ephemeral
+    });
+    return;
+  }
+
   if (!nome || !playerId || !configuredRole) {
     await interaction.reply({
       content: "Nao foi possivel validar os dados enviados.",
@@ -454,10 +470,11 @@ async function handleModalSubmit(interaction, client, config) {
         member,
         nome,
         playerId,
-        roleId,
+        roleId: configuredRole.key,
+        displayRoleId: configuredRole.roleId,
         roleLabel: configuredRole.label,
         title: REVIEW_TITLE,
-        summary: `${member} iniciou a setagem e pediu o cargo <@&${roleId}>.`,
+        summary: `${member} iniciou a setagem e pediu o cargo <@&${configuredRole.roleId}>.`,
         footer: REVIEW_FOOTER,
         accentColor: config.accentColor,
         submittedAt
@@ -470,14 +487,15 @@ async function handleModalSubmit(interaction, client, config) {
       memberId: member.id,
       nome,
       playerId,
-      roleId,
+      roleId: configuredRole.key,
+      displayRoleId: configuredRole.roleId,
       roleLabel: configuredRole.label,
       submittedAt
     });
   });
 
   await interaction.reply({
-    content: "Sua setagem foi enviada para revisao.",
+    content: "Seu registro foi enviado para revisao.",
     flags: MessageFlags.Ephemeral
   });
 }

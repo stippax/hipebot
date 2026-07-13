@@ -1,0 +1,23 @@
+{
+  "guilds": {
+    "1513563251315576863": {
+      "users": {
+        "715047194406682668": {
+          "channels": {
+            "1526086824513245215": {
+              "totalWorkedMs": 171353,
+              "sessionCount": 1,
+              "lastFinishedAt": 1783918130514
+            },
+            "1526080975954645152": {
+              "totalWorkedMs": 17703,
+              "sessionCount": 1,
+              "lastFinishedAt": 1783918163628
+            }
+          },
+          "activeSession": null
+        }
+      }
+    }
+  }
+}
