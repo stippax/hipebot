@@ -108,9 +108,9 @@ Configure em `modules/ponto/config.json`:
 
 Para ativar:
 
-- crie a tabela com `supabase/migrations/20260713173000_create_ponto_states.sql`
+- aplique as migrations `supabase/migrations/20260713173000_create_ponto_states.sql` e `supabase/migrations/20260713211000_rename_ponto_states_to_bot_ponto.sql`
 - defina `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`
-- opcionalmente defina `PONTO_TABLE` se quiser trocar o nome padrao `ponto_states`
+- opcionalmente defina `PONTO_TABLE` se quiser trocar o nome padrao `bot_ponto`
 
 Observacoes:
 

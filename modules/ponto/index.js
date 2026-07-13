@@ -16,7 +16,7 @@ const INFO_COMMAND_NAME = "ponto";
 const GIVE_TIME_COMMAND_NAME = "dartempo";
 const TOGGLE_BUTTON_PREFIX = "ponto:toggle:";
 const FINISH_BUTTON_PREFIX = "ponto:finish:";
-const DEFAULT_TABLE = "ponto_states";
+const DEFAULT_TABLE = "bot_ponto";
 
 function isSnowflake(value) {
   return typeof value === "string" && /^\d{17,20}$/.test(value);
