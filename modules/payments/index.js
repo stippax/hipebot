@@ -274,7 +274,7 @@ function buildPixPayload(amount, description) {
     .replace(/[\u0300-\u036f]/g, "")
     .toUpperCase()
     .slice(0, 15);
-  const txid = "LINEUPLABS";
+  const txid = "HIPESTUDIO";
   const amountText = amount.toFixed(2);
   const safeDescription = (description || "Pagamento")
     .normalize("NFD")

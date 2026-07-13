@@ -2,7 +2,7 @@ const path = require("node:path");
 const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const sharp = require("sharp");
 
-const R2_BUCKET = process.env.R2_BUCKET || "lineuplabs";
+const R2_BUCKET = process.env.R2_BUCKET || "hipestudio";
 const WEBP_QUALITY = 85;
 
 let cachedClient;

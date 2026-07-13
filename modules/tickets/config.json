@@ -14,7 +14,7 @@
   "ticketNamePrefix": "ticket",
   "panelTitle": "Central de Atendimento",
   "panelDescription": "Selecione abaixo o tipo de atendimento que deseja abrir com a equipe.",
-  "panelBodyDescription": "Escolha a categoria desejada no menu abaixo para abrir seu ticket com a equipe.",
+  "panelBodyDescription": "Olá! Utilize o espaço abaixo para registrar uma denúncia ou contestação. Caso esteja realizando uma denúncia, identifique corretamente o acusado e informe: ID do acusado, QRA do acusado, Motivo da denúncia. Descreva a situação com clareza e forneça o máximo de informações possível para facilitar a análise do caso.",
   "welcomeMessage": "Descreva seu problema ou pedido com o maximo de detalhes possivel.",
   "selectPlaceholder": "Selecione o tipo de ticket",
   "staffMenuButtonLabel": "Menu Staff",
@@ -24,36 +24,20 @@
   "closeButtonLabel": "Fechar Ticket",
   "ticketTypes": [
     {
-      "value": "suporte",
-      "label": "Suporte",
-      "description": "Ajuda tecnica, erros, duvidas e problemas.",
-      "emoji": "🛠️",
-      "channelPrefix": "suporte",
-      "welcomeMessage": "Descreva o problema, erro ou duvida para a equipe te ajudar."
-    },
-    {
       "value": "denuncia",
       "label": "Denúncia",
-      "description": "Solicitacoes de parceria, collab e divulgacao.",
-      "emoji": "🤝",
-      "channelPrefix": "denuncia",
-      "welcomeMessage": "Explique sua proposta de parceria com todos os detalhes relevantes."
+      "description": "Solicitacões de denúncia.",
+      "emoji": "⚠️",
+      "channelPrefix": "denúncia",
+      "welcomeMessage": "Explique sua denúncia com todos os detalhes relevantes, incluindo o ID do acusado, QRA do acusado e o motivo da denuncia."
     },
     {
-      "value": "parceria",
-      "label": "Parceria",
-      "description": "Solicitacoes de parceria, collab e divulgacao.",
-      "emoji": "🤝",
-      "channelPrefix": "parceria",
-      "welcomeMessage": "Explique sua proposta de parceria com todos os detalhes relevantes."
-    },
-    {
-      "value": "lojavip",
-      "label": "Loja Vip",
-      "description": "Pedidos comerciais, valores e escopo de projeto.",
-      "emoji": "💼",
-      "channelPrefix": "vip",
-      "welcomeMessage": "Informe o que voce precisa e os detalhes do servico para receber um orcamento."
+      "value": "Contestacao",
+      "label": "Contestação",
+      "description": "Solicitacões de contestacão.",
+      "emoji": "⚖️",
+      "channelPrefix": "contestacao",
+      "welcomeMessage": "Explique sua contestacão com todos os detalhes relevantes."
     }
   ]
 }
