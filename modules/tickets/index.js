@@ -495,6 +495,14 @@ function buildTranscriptEmbed({ transcript, password, url, includePassword }) {
     { name: "Mensagens", value: String(transcript.messages.length), inline: true }
   ];
 
+  if (transcript.owner?.tag || transcript.ownerId) {
+    fields.push({
+      name: "Aberto por",
+      value: [transcript.owner?.tag || "Nao encontrado", `ID: ${transcript.ownerId || "Nao encontrado"}`].join("\n"),
+      inline: true
+    });
+  }
+
   if (transcript.claimedBy?.tag) {
     fields.push({
       name: "Atendido por",
@@ -529,10 +537,14 @@ function buildTranscriptEmbed({ transcript, password, url, includePassword }) {
   return embed;
 }
 
-function buildClosedWithoutTranscriptEmbed({ channelName, ownerTag, claimedByTag, closedByTag }) {
+function buildClosedWithoutTranscriptEmbed({ channelName, ownerTag, ownerId, ownerAvatarUrl, claimedByTag, closedByTag }) {
   const fields = [
     { name: "Ticket", value: `#${truncate(channelName, 1000)}`, inline: true },
-    { name: "Aberto por", value: ownerTag || "Nao encontrado", inline: true },
+    {
+      name: "Aberto por",
+      value: [ownerTag || "Nao encontrado", `ID: ${ownerId || "Nao encontrado"}`].join("\n"),
+      inline: true
+    },
     { name: "Fechado por", value: closedByTag || "Nao encontrado", inline: true }
   ];
 
@@ -544,12 +556,18 @@ function buildClosedWithoutTranscriptEmbed({ channelName, ownerTag, claimedByTag
     });
   }
 
-  return new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setColor(0x5865f2)
     .setTitle("Ticket fechado sem historico")
     .setDescription("Este ticket foi encerrado sem gerar transcript.")
     .addFields(fields)
     .setTimestamp(new Date());
+
+  if (ownerAvatarUrl) {
+    embed.setThumbnail(ownerAvatarUrl);
+  }
+
+  return embed;
 }
 
 async function findTicketCardMessage(channel) {
@@ -780,6 +798,8 @@ async function closeTicket(interaction, client, config, options = {}) {
           buildClosedWithoutTranscriptEmbed({
             channelName: channel.name,
             ownerTag: ownerUser?.tag || null,
+            ownerId: metadata?.ownerId || null,
+            ownerAvatarUrl: ownerUser?.displayAvatarURL?.({ size: 128 }) || null,
             claimedByTag: claimedByUser?.tag || null,
             closedByTag: interaction.user.tag
           })
@@ -905,10 +925,6 @@ async function claimTicket(interaction, client, config) {
   await updateTicketClaim(interaction.channel, metadata, interaction.user.id);
   await refreshTicketCard(interaction.channel, config);
 
-  await interaction.channel.send({
-    content: `${interaction.user} assumiu este ticket.`
-  }).catch(() => {});
-
   await sendTicketLog(
     client,
     interaction.guild,
@@ -1010,10 +1026,6 @@ async function transferTicket(interaction, client, config) {
 
   await updateTicketClaim(interaction.channel, metadata, member.id);
   await refreshTicketCard(interaction.channel, config);
-
-  await interaction.channel.send({
-    content: `${interaction.user} transferiu este ticket para ${member}.`
-  }).catch(() => {});
 
   await sendTicketLog(
     client,

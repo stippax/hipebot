@@ -224,6 +224,9 @@ async function buildTranscript(channel, metadata, closedBy) {
     guildName: channel.guild.name,
     channelName: channel.name,
     ownerId: metadata?.ownerId || null,
+    owner: metadata?.ownerId
+      ? serializeUser(await channel.client.users.fetch(metadata.ownerId).catch(() => null))
+      : null,
     ticketType: metadata?.ticketType || null,
     claimedBy: metadata?.claimedById
       ? serializeUser(await channel.client.users.fetch(metadata.claimedById).catch(() => null))
