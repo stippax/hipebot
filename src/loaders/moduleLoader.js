@@ -5,7 +5,7 @@ async function loadModules(client) {
   const modulesRoot = path.resolve(__dirname, "../../modules");
 
   if (!fs.existsSync(modulesRoot)) {
-    return [];
+    return { loadedModules: [], commandDefinitions: [] };
   }
 
   const moduleFolders = fs.readdirSync(modulesRoot, { withFileTypes: true })
@@ -13,6 +13,7 @@ async function loadModules(client) {
     .map((entry) => entry.name);
 
   const loadedModules = [];
+  const commandDefinitions = [];
 
   for (const folderName of moduleFolders) {
     const modulePath = path.join(modulesRoot, folderName, "index.js");
@@ -39,11 +40,25 @@ async function loadModules(client) {
       continue;
     }
 
+    if (typeof moduleDefinition.getCommands === "function") {
+      try {
+        const moduleCommands = moduleDefinition.getCommands(config, {
+          modulePath: path.join(modulesRoot, folderName)
+        });
+
+        if (Array.isArray(moduleCommands)) {
+          commandDefinitions.push(...moduleCommands);
+        }
+      } catch (error) {
+        console.error(`Falha ao coletar comandos do modulo ${folderName}.`, error);
+      }
+    }
+
     await moduleDefinition.register({ client, config, modulePath: path.join(modulesRoot, folderName) });
     loadedModules.push(folderName);
   }
 
-  return loadedModules;
+  return { loadedModules, commandDefinitions };
 }
 
 module.exports = {

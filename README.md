@@ -25,6 +25,7 @@ DISCORD_TOKEN=seu_token
 
 4. Configure os canais de log em `modules/member-logs/config.json`.
 5. Se for usar log de call, configure `modules/call-logs/config.json`.
+6. Se for usar log de mensagens, configure `modules/message-logs/config.json`.
 
 6. Inicie o bot:
 
@@ -102,6 +103,24 @@ Configure em `modules/ponto/config.json`:
 
 - `guildId`: servidor onde os slash commands serao registrados rapidamente
 - `allowedChannelId`: se preencher, limita o `/bateponto` a esse canal
+
+## Modulo de log de mensagens
+
+O modulo `message-logs` envia logs quando uma mensagem:
+
+- e apagada
+- e editada
+
+Configure em `modules/message-logs/config.json`:
+
+- `logChannelId`: canal onde os logs serao enviados
+- `ignoreBots`: se `true`, ignora mensagens de bots
+- `maxContentLength`: limite de caracteres exibidos no log
+
+Observacoes:
+
+- o bot tenta buscar mensagens parciais antes de registrar o evento
+- se a mensagem apagada nao estiver mais disponivel no cache/API, o Discord pode nao fornecer o texto original
 
 ## Modulo de tickets
 

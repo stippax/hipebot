@@ -299,25 +299,17 @@ function buildInfoCommand() {
     );
 }
 
-async function registerCommands(client, config) {
-  if (!client.application) {
-    return;
-  }
+function getCommands(config) {
+  const resolvedConfig = resolveConfig(config);
 
-  const commands = [
+  return [
     buildStartCommand().toJSON(),
     buildRankingCommand().toJSON(),
     buildInfoCommand().toJSON()
-  ];
-
-  for (const command of commands) {
-    if (config.guildId) {
-      await client.application.commands.create(command, config.guildId);
-      continue;
-    }
-
-    await client.application.commands.create(command);
-  }
+  ].map((command) => ({
+    command,
+    guildId: resolvedConfig.guildId
+  }));
 }
 
 function ensureAllowedChannel(interaction, config) {
@@ -559,14 +551,6 @@ async function register({ client, config, modulePath }) {
   const dataFilePath = path.join(modulePath, "data.json");
   const state = loadState(dataFilePath);
 
-  client.once(Events.ClientReady, async () => {
-    try {
-      await registerCommands(client, resolvedConfig);
-    } catch (error) {
-      console.error("[ponto] Falha ao registrar slash commands.", error);
-    }
-  });
-
   client.on(Events.InteractionCreate, async (interaction) => {
     try {
       if (interaction.isChatInputCommand()) {
@@ -613,5 +597,6 @@ async function register({ client, config, modulePath }) {
 }
 
 module.exports = {
-  register
+  register,
+  getCommands
 };

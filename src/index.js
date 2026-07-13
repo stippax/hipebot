@@ -38,13 +38,51 @@ const client = new Client({
   ]
 });
 
+async function syncApplicationCommands(client, commandDefinitions) {
+  if (!client.application) {
+    return;
+  }
+
+  const globalCommands = [];
+  const guildCommands = new Map();
+
+  for (const definition of commandDefinitions) {
+    if (!definition || !definition.command) {
+      continue;
+    }
+
+    if (definition.guildId) {
+      const commands = guildCommands.get(definition.guildId) || [];
+      commands.push(definition.command);
+      guildCommands.set(definition.guildId, commands);
+      continue;
+    }
+
+    globalCommands.push(definition.command);
+  }
+
+  await client.application.commands.set(globalCommands);
+
+  for (const guild of client.guilds.cache.values()) {
+    const commands = guildCommands.get(guild.id) || [];
+    await client.application.commands.set(commands, guild.id);
+  }
+}
+
 async function bootstrap() {
-  const loadedModules = await loadModules(client);
+  const { loadedModules, commandDefinitions } = await loadModules(client);
   client.loadedModules = loadedModules;
 
-  client.once(Events.ClientReady, () => {
+  client.once(Events.ClientReady, async () => {
     console.log(`Bot conectado como ${client.user.tag}.`);
     console.log(`Modulos carregados: ${loadedModules.join(", ") || "nenhum"}.`);
+
+    try {
+      await syncApplicationCommands(client, commandDefinitions);
+      console.log("Slash commands sincronizados com sucesso.");
+    } catch (error) {
+      console.error("Falha ao sincronizar slash commands.", error);
+    }
   });
 
   await client.login(token);

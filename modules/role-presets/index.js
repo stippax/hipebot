@@ -94,19 +94,17 @@ function findPreset(config, key) {
   return config.presets.find((preset) => preset.key === key) || null;
 }
 
-async function registerCommand(client, config) {
-  if (!client.application) {
-    return;
+function getCommands(config) {
+  const resolvedConfig = resolveConfig(config);
+
+  if (!resolvedConfig.presets.length) {
+    return [];
   }
 
-  const command = buildCommand(config).toJSON();
-
-  if (config.guildId) {
-    await client.application.commands.create(command, config.guildId);
-    return;
-  }
-
-  await client.application.commands.create(command);
+  return [{
+    command: buildCommand(resolvedConfig).toJSON(),
+    guildId: resolvedConfig.guildId
+  }];
 }
 
 async function handleCommand(interaction, config) {
@@ -195,19 +193,6 @@ async function handleCommand(interaction, config) {
 async function register({ client, config }) {
   const resolvedConfig = resolveConfig(config);
 
-  client.once(Events.ClientReady, async () => {
-    if (!resolvedConfig.presets.length) {
-      console.warn("[role-presets] Nenhum preset valido configurado.");
-      return;
-    }
-
-    try {
-      await registerCommand(client, resolvedConfig);
-    } catch (error) {
-      console.error("[role-presets] Falha ao registrar comando.", error);
-    }
-  });
-
   client.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isChatInputCommand() || interaction.commandName !== resolvedConfig.commandName) {
       return;
@@ -229,5 +214,6 @@ async function register({ client, config }) {
 }
 
 module.exports = {
-  register
+  register,
+  getCommands
 };
