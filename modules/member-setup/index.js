@@ -29,7 +29,7 @@ const ROLE_SELECT_CUSTOM_ID = "setagem-membros:cargo";
 const PANEL_TITLE = "Setagem de Membros";
 const PANEL_DESCRIPTION = "Clique no botao abaixo para iniciar sua setagem.";
 const PANEL_FOOTER = "Preencha nome, ID e o cargo desejado para enviar sua solicitacao.";
-const BUTTON_LABEL = "Iniciar Setagem";
+const BUTTON_LABEL = "🔹Iniciar Setagem";
 const MODAL_TITLE = "Formulario de Setagem";
 const REVIEW_TITLE = "Nova solicitacao de setagem";
 const REVIEW_FOOTER = "Revise os dados e escolha aceitar ou negar.";
@@ -156,7 +156,7 @@ function buildPanel(config) {
           new ButtonBuilder()
             .setCustomId(OPEN_MODAL_CUSTOM_ID)
             .setLabel(BUTTON_LABEL)
-            .setStyle(ButtonStyle.Primary)
+            .setStyle(ButtonStyle.Secondary)
         )
     )
     .addSeparatorComponents(new SeparatorBuilder());

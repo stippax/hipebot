@@ -81,6 +81,19 @@ function isSnowflake(value) {
   return typeof value === "string" && /^\d{17,20}$/.test(value);
 }
 
+function parseHexColor(value, fallback) {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+
+  const normalized = value.trim().replace(/^#/, "");
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
+    return fallback;
+  }
+
+  return Number.parseInt(normalized, 16);
+}
+
 function sanitizeChannelName(value) {
   return value
     .toLowerCase()
@@ -145,11 +158,22 @@ function resolveConfig(config) {
     categoryId: isSnowflake(config.categoryId) ? config.categoryId : null,
     staffRoleId: isSnowflake(config.staffRoleId) ? config.staffRoleId : null,
     ticketLogChannelId: isSnowflake(config.ticketLogChannelId) ? config.ticketLogChannelId : null,
+    panelAccentColor: parseHexColor(config.panelAccentColor, 0x2b3ed4),
+    ticketAccentColor: parseHexColor(config.ticketAccentColor, 0x57f287),
     panelBannerUrl: typeof config.panelBannerUrl === "string" && config.panelBannerUrl.trim()
       ? config.panelBannerUrl.trim()
       : null,
     ticketBannerUrl: typeof config.ticketBannerUrl === "string" && config.ticketBannerUrl.trim()
       ? config.ticketBannerUrl.trim()
+      : null,
+    panelThumbnailUrl: typeof config.panelThumbnailUrl === "string" && config.panelThumbnailUrl.trim()
+      ? config.panelThumbnailUrl.trim()
+      : "https://cdn.discordapp.com/embed/avatars/0.png",
+    ticketThumbnailUrl: typeof config.ticketThumbnailUrl === "string" && config.ticketThumbnailUrl.trim()
+      ? config.ticketThumbnailUrl.trim()
+      : null,
+    panelBodyDescription: typeof config.panelBodyDescription === "string" && config.panelBodyDescription.trim()
+      ? config.panelBodyDescription.trim()
       : null,
     ticketTypes: resolveTicketTypes(config)
   };
@@ -161,7 +185,7 @@ function findTicketType(config, value) {
 
 function buildPanelCard(config) {
   const container = new ContainerBuilder()
-    .setAccentColor(0x2b3ed4)
+    .setAccentColor(config.panelAccentColor)
     .addSectionComponents(
       new SectionBuilder()
         .addTextDisplayComponents(
@@ -173,16 +197,14 @@ function buildPanelCard(config) {
         )
         .setThumbnailAccessory(
           new ThumbnailBuilder()
-            .setURL("https://cdn.discordapp.com/embed/avatars/0.png")
+            .setURL(config.panelThumbnailUrl)
             .setDescription("Painel de tickets")
         )
     )
     .addSeparatorComponents(new SeparatorBuilder())
     .addTextDisplayComponents(
       new TextDisplayBuilder().setContent(
-        config.ticketTypes
-          .map((type) => `**${type.label}:** ${type.description || "Atendimento dedicado para este assunto."}`)
-          .join("\n")
+        config.panelBodyDescription || "Selecione um tipo de ticket no menu abaixo para abrir seu atendimento."
       )
     );
 
@@ -226,7 +248,7 @@ function buildTicketCard(member, config, ticketType, options = {}) {
   const claimedByLine = options.claimedBy ? `**Assumido por:** ${options.claimedBy}` : null;
 
   const container = new ContainerBuilder()
-    .setAccentColor(0x57f287)
+    .setAccentColor(config.ticketAccentColor)
     .addSectionComponents(
       new SectionBuilder()
         .addTextDisplayComponents(
@@ -235,7 +257,7 @@ function buildTicketCard(member, config, ticketType, options = {}) {
         )
         .setThumbnailAccessory(
           new ThumbnailBuilder()
-            .setURL(member.user.displayAvatarURL({ size: 256 }))
+            .setURL(config.ticketThumbnailUrl || member.user.displayAvatarURL({ size: 256 }))
             .setDescription(`Avatar de ${member.user.tag}`)
         )
     )
