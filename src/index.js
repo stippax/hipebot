@@ -8,7 +8,7 @@ for (const envFile of envFiles) {
   const envPath = path.resolve(process.cwd(), envFile);
 
   if (fs.existsSync(envPath)) {
-    dotenv.config({ path: envPath, override: true });
+    dotenv.config({ path: envPath });
   }
 }
 
@@ -18,7 +18,7 @@ const { loadModules } = require("./loaders/moduleLoader");
 const token = process.env.DISCORD_TOKEN;
 
 if (!token) {
-  throw new Error("A variavel DISCORD_TOKEN nao foi definida em .env.local ou .env.");
+  throw new Error("A variavel DISCORD_TOKEN nao foi definida no ambiente, .env.local ou .env.");
 }
 
 const client = new Client({

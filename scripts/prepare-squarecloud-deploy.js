@@ -3,7 +3,6 @@ const path = require("node:path");
 
 const projectRoot = path.resolve(__dirname, "..");
 const targetDir = path.join(projectRoot, ".squarecloud-deploy-temp");
-const envCandidates = [".env.local", ".env"];
 const includedEntries = ["modules", "src", "package.json", "package-lock.json", "squarecloud.app"];
 
 function assertInsideProject(targetPath) {
@@ -42,18 +41,6 @@ function copyRecursive(sourcePath, targetPath) {
   fs.copyFileSync(sourcePath, targetPath);
 }
 
-function resolveEnvSource() {
-  for (const candidate of envCandidates) {
-    const envPath = path.join(projectRoot, candidate);
-
-    if (fs.existsSync(envPath)) {
-      return envPath;
-    }
-  }
-
-  return null;
-}
-
 function copyProjectFiles() {
   for (const entry of includedEntries) {
     const sourcePath = path.join(projectRoot, entry);
@@ -67,26 +54,10 @@ function copyProjectFiles() {
   }
 }
 
-function writeEnvFile() {
-  const envSource = resolveEnvSource();
-
-  if (!envSource) {
-    console.warn("[deploy] Nenhum arquivo .env.local ou .env encontrado. O pacote sera gerado sem .env.");
-    return;
-  }
-
-  const targetEnvPath = path.join(targetDir, ".env");
-  const envContent = fs.readFileSync(envSource, "utf8");
-  fs.writeFileSync(targetEnvPath, envContent);
-
-  console.log(`[deploy] Variaveis copiadas de ${path.basename(envSource)}.`);
-}
-
 function main() {
   removeTargetDirectory();
   fs.mkdirSync(targetDir, { recursive: true });
   copyProjectFiles();
-  writeEnvFile();
 
   console.log(`[deploy] Pasta preparada em ${targetDir}.`);
 }
