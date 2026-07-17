@@ -479,6 +479,57 @@ async function persistGuildState(storage, state, guildId) {
   await saveGuildState(storage, guildId, getGuildState(state, guildId));
 }
 
+async function updateSessionMessageAsFinished({ guild, session, member, channelRecord, sessionWorkedMs, config }) {
+  if (!session?.channelId || !session?.messageId) {
+    return false;
+  }
+
+  const channel = guild.channels.cache.get(session.channelId)
+    || await guild.channels.fetch(session.channelId).catch(() => null);
+
+  if (!channel?.isTextBased()) {
+    return false;
+  }
+
+  const message = await channel.messages.fetch(session.messageId).catch(() => null);
+
+  if (!message) {
+    return false;
+  }
+
+  await message.edit({
+    embeds: [buildFinishedEmbed(member, channelRecord, sessionWorkedMs, config)],
+    components: []
+  }).catch(() => {});
+
+  return true;
+}
+
+async function disableStaleSessionButton(interaction) {
+  if (interaction.replied || interaction.deferred) {
+    return;
+  }
+
+  if (interaction.message?.editable) {
+    await interaction.update({
+      components: []
+    }).catch(() => null);
+
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp({
+        content: "Esse ponto ja foi finalizado ou nao esta mais ativo.",
+        flags: MessageFlags.Ephemeral
+      }).catch(() => {});
+      return;
+    }
+  }
+
+  await interaction.reply({
+    content: "Esse ponto ja foi finalizado ou nao esta mais ativo.",
+    flags: MessageFlags.Ephemeral
+  }).catch(() => {});
+}
+
 async function handleStartCommand(interaction, config, state, storage) {
   if (!interaction.inGuild()) {
     await interaction.reply({
@@ -593,10 +644,7 @@ async function handleToggleButton(interaction, state, storage, config) {
   const member = await interaction.guild.members.fetch(userId).catch(() => null);
 
   if (!session || !member) {
-    await interaction.reply({
-      content: "Nao existe um ponto ativo valido para esse membro.",
-      flags: MessageFlags.Ephemeral
-    });
+    await disableStaleSessionButton(interaction);
     return;
   }
 
@@ -659,10 +707,7 @@ async function handleFinishButton(interaction, state, storage, config) {
     });
   } catch (error) {
     if (error?.message === "NO_ACTIVE_SESSION") {
-      await interaction.reply({
-        content: "Nao existe um ponto ativo valido para esse membro.",
-        flags: MessageFlags.Ephemeral
-      });
+      await disableStaleSessionButton(interaction);
       return;
     }
 
@@ -769,7 +814,8 @@ async function closeActiveSession({ guild, guildId, userId, state, storage }) {
   return {
     member,
     channelRecord,
-    sessionWorkedMs
+    sessionWorkedMs,
+    closedSession: session
   };
 }
 
@@ -1002,12 +1048,21 @@ async function handleCloseCommand(interaction, state, storage, config) {
   }
 
   try {
-    const { member, channelRecord, sessionWorkedMs } = await closeActiveSession({
+    const { member, channelRecord, sessionWorkedMs, closedSession } = await closeActiveSession({
       guild: interaction.guild,
       guildId: interaction.guildId,
       userId: targetUser.id,
       state,
       storage
+    });
+
+    await updateSessionMessageAsFinished({
+      guild: interaction.guild,
+      session: closedSession,
+      member,
+      channelRecord,
+      sessionWorkedMs,
+      config
     });
 
     await interaction.reply({
