@@ -1,11 +1,13 @@
 # HIPE Studio Bot
 
-Bot de Discord modular, pensado para crescer por pastas de modulo sem alterar a raiz do projeto.
+Core modular capaz de iniciar varios bots do Discord no mesmo processo. Cada pasta em `servers/`
+representa uma instancia independente, com token, servidor e modulos proprios, enquanto o codigo
+dos modulos permanece compartilhado em `modules/`.
 
 ## Requisitos
 
 - Node.js 18+
-- Um bot criado no Discord Developer Portal
+- Um bot criado no Discord Developer Portal para cada instancia
 
 ## Como usar
 
@@ -15,19 +17,18 @@ Bot de Discord modular, pensado para crescer por pastas de modulo sem alterar a 
 npm install
 ```
 
-2. Para producao simples ou uso geral, copie `.env.example` para `.env` e preencha:
+2. Copie `.env.example` para `.env` e informe o token usado pela instancia `principal`:
 
 ```env
 DISCORD_TOKEN=seu_token
 ```
 
-3. Para teste local no Windows, copie `.env.local.example` para `.env.local` e preencha o token local.
+3. Para teste local no Windows, use `.env.local`, que tem prioridade sobre `.env`.
 
-4. Configure os canais de log em `modules/member-logs/config.json`.
-5. Se for usar log de call, configure `modules/call-logs/config.json`.
-6. Se for usar log de mensagens, configure `modules/message-logs/config.json`.
+4. Configure a instancia em `servers/principal/config.json` e seus modulos em
+   `servers/principal/modules/`.
 
-6. Inicie o bot:
+5. Inicie todos os bots:
 
 ```bash
 npm start
@@ -39,6 +40,30 @@ Ou, no Windows, rode:
 start.bat
 ```
 
+## Adicionando outra instancia
+
+Crie uma pasta como `servers/server2/` com este arquivo `config.json`:
+
+```json
+{
+  "name": "server2",
+  "guildId": "ID_DO_SERVIDOR",
+  "tokenEnv": "DISCORD_TOKEN_SERVER2"
+}
+```
+
+Depois crie `servers/server2/modules/`. Cada arquivo JSON nessa pasta ativa um modulo com o
+mesmo nome existente em `modules/`. Por exemplo:
+
+```text
+servers/server2/modules/member-logs.json
+servers/server2/modules/tickets.json
+```
+
+Defina `DISCORD_TOKEN_SERVER2` no ambiente e execute `npm start` novamente. O core iniciara
+`principal` e `server2` juntos, cada um com um `Discord Client` e um token diferentes. Para
+desativar um modulo em uma instancia, remova o JSON correspondente apenas daquela instancia.
+
 ## Deploy na Square Cloud
 
 O projeto ja inclui o arquivo `squarecloud.app` na raiz, pronto para deploy.
@@ -46,14 +71,16 @@ O projeto ja inclui o arquivo `squarecloud.app` na raiz, pronto para deploy.
 ### Via GitHub
 
 1. Importe o repositorio no painel da Square Cloud.
-2. Configure a variavel de ambiente `DISCORD_TOKEN` no app.
-3. Edite `modules/member-logs/config.json` com o ID do canal de logs.
+2. Configure todas as variaveis indicadas por `tokenEnv` nos arquivos de `servers/`.
+3. Edite os arquivos em `servers/<instancia>/modules/` com os IDs dos canais e cargos.
 4. Ative o `SERVER MEMBERS INTENT` no Discord Developer Portal.
 
 ### Observacoes
 
 - `.env.local` tem prioridade sobre `.env` ao iniciar localmente.
 - Nao envie `.env` ou `.env.local` para producao.
+- Cada instancia precisa usar o token de um bot diferente.
+- Slash commands sao registrados somente no `guildId` da respectiva instancia.
 - A Square Cloud instala as dependencias a partir do `package.json`.
 - O comando de inicializacao usado no deploy e `npm run start`.
 - Antes de empacotar para a Square Cloud, rode `npm run deploy:prepare` para recriar `.\.squarecloud-deploy-temp` a partir da raiz atual do projeto.
@@ -61,9 +88,11 @@ O projeto ja inclui o arquivo `squarecloud.app` na raiz, pronto para deploy.
 ## Estrutura
 
 - `src/index.js`: bootstrap do bot
+- `src/loaders/serverLoader.js`: encontra e valida as instancias
 - `src/loaders/moduleLoader.js`: carregador automatico de modulos
 - `modules/<nome-do-modulo>/index.js`: logica do modulo
-- `modules/<nome-do-modulo>/config.json`: configuracao isolada do modulo
+- `servers/<instancia>/config.json`: token e servidor da instancia
+- `servers/<instancia>/modules/<nome-do-modulo>.json`: configuracao do modulo na instancia
 
 ## Modulo inicial
 
@@ -82,7 +111,7 @@ O modulo `call-logs` envia logs quando um membro:
 - sai de uma call
 - troca de call, se `logMoves` estiver ativo
 
-Configure em `modules/call-logs/config.json`:
+Configure em `servers/<instancia>/modules/call-logs.json`:
 
 - `logChannelId`: canal onde os logs de voz serao enviados
 - `ignoreBots`: se `true`, ignora bots nos eventos
@@ -103,7 +132,7 @@ Comandos:
 - `/ponto fechar usuario:@membro`: fecha manualmente o ponto ativo do membro
 - `/ponto remover usuario:@membro horas:<n> minutos:<n> segundos:<n>`: remove tempo manualmente do ponto do membro no canal atual
 
-Configure em `modules/ponto/config.json`:
+Configure em `servers/<instancia>/modules/ponto.json`:
 
 - `guildId`: servidor onde os slash commands serao registrados rapidamente
 - `allowedChannelId`: se preencher, limita o `/bateponto` a esse canal
@@ -132,7 +161,7 @@ O modulo `message-logs` envia logs quando uma mensagem:
 - e apagada
 - e editada
 
-Configure em `modules/message-logs/config.json`:
+Configure em `servers/<instancia>/modules/message-logs.json`:
 
 - `logChannelId`: canal onde os logs serao enviados
 - `ignoreBots`: se `true`, ignora mensagens de bots
@@ -147,7 +176,7 @@ Observacoes:
 
 O modulo `tickets` cria um painel de atendimento e abre canais privados por usuario.
 
-Configure em `modules/tickets/config.json`:
+Configure em `servers/<instancia>/modules/tickets.json`:
 
 - `panelChannelId`: canal onde o painel sera enviado
 - `categoryId`: categoria onde os tickets serao criados
@@ -182,7 +211,7 @@ O modulo `reaction-roles` cria regras de cargo por reacao com comportamento togg
 - reagiu: ganha o cargo
 - removeu a reacao: perde o cargo
 
-Configure em `modules/reaction-roles/config.json`:
+Configure em `servers/<instancia>/modules/reaction-roles.json`:
 
 - `guildId`: servidor onde o slash command sera registrado rapidamente
 
@@ -200,7 +229,7 @@ Observacao:
 
 O modulo `payments` cria um link de pagamento do Mercado Pago usando Checkout Pro.
 
-Configure em `modules/payments/config.json`:
+Configure em `servers/<instancia>/modules/payments.json`:
 
 - `guildId`: servidor onde o slash command sera registrado rapidamente
 - `currencyId`: normalmente `BRL`
@@ -241,7 +270,7 @@ O modulo `member-setup` cria um fluxo simples de aprovacao manual:
 - ao aceitar, o bot entrega o cargo selecionado e tenta renomear o membro para o padrao `[SIGLA] Nome | ID`
 - ao negar, o bot expulsa o membro do servidor
 
-Configure em `modules/member-setup/config.json`:
+Configure em `servers/<instancia>/modules/member-setup.json`:
 
 - `panelChannelId`: canal onde o painel inicial sera enviado
 - `reviewChannelId`: canal onde a equipe revisa as solicitacoes
@@ -262,7 +291,7 @@ Observacoes:
 
 O modulo `role-presets` aplica varios cargos de uma vez em um membro usando um preset salvo no config.
 
-Configure em `modules/role-presets/config.json`:
+Configure em `servers/<instancia>/modules/role-presets.json`:
 
 - `guildId`: servidor onde o slash command sera registrado rapidamente
 - `commandName`: nome do comando slash, como `cargo-preset`
@@ -276,6 +305,7 @@ Configure em `modules/role-presets/config.json`:
 Crie uma nova pasta dentro de `modules/` com:
 
 - `index.js` exportando `register({ client, config, modulePath })`
-- `config.json` com a configuracao daquele recurso
 
-O carregador encontra a pasta automaticamente quando o bot inicia.
+Para ativar o novo modulo, crie `servers/<instancia>/modules/<nome-do-modulo>.json` com a
+configuracao daquela instancia. O nome do arquivo JSON deve ser igual ao nome da pasta em
+`modules/`.

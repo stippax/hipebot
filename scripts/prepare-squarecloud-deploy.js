@@ -3,7 +3,14 @@ const path = require("node:path");
 
 const projectRoot = path.resolve(__dirname, "..");
 const targetDir = path.join(projectRoot, ".squarecloud-deploy-temp");
-const includedEntries = ["modules", "src", "package.json", "package-lock.json", "squarecloud.app"];
+const includedEntries = [
+  "modules",
+  "servers",
+  "src",
+  "package.json",
+  "package-lock.json",
+  "squarecloud.app"
+];
 const excludedRelativePaths = new Set([
   path.normalize("modules/ponto/data.json")
 ]);

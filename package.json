@@ -8,7 +8,7 @@
   },
   "scripts": {
     "start": "node src/index.js",
-    "check": "node --check src/index.js",
+    "check": "node --check src/index.js && node --check src/loaders/moduleLoader.js && node --check src/loaders/serverLoader.js",
     "deploy:prepare": "node scripts/prepare-squarecloud-deploy.js"
   },
   "keywords": [

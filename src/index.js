@@ -2,9 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const dotenv = require("dotenv");
 
-const envFiles = [".env.local", ".env"];
-
-for (const envFile of envFiles) {
+for (const envFile of [".env.local", ".env"]) {
   const envPath = path.resolve(process.cwd(), envFile);
 
   if (fs.existsSync(envPath)) {
@@ -14,81 +12,85 @@ for (const envFile of envFiles) {
 
 const { Client, Events, GatewayIntentBits, Partials } = require("discord.js");
 const { loadModules } = require("./loaders/moduleLoader");
+const { loadServerInstances } = require("./loaders/serverLoader");
 
-const token = process.env.DISCORD_TOKEN;
-
-if (!token) {
-  throw new Error("A variavel DISCORD_TOKEN nao foi definida no ambiente, .env.local ou .env.");
+function createClient() {
+  return new Client({
+    intents: [
+      GatewayIntentBits.Guilds,
+      GatewayIntentBits.GuildMembers,
+      GatewayIntentBits.GuildMessages,
+      GatewayIntentBits.MessageContent,
+      GatewayIntentBits.GuildMessageReactions,
+      GatewayIntentBits.GuildVoiceStates
+    ],
+    partials: [
+      Partials.GuildMember,
+      Partials.Channel,
+      Partials.Message,
+      Partials.Reaction
+    ]
+  });
 }
 
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMembers,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMessageReactions,
-    GatewayIntentBits.GuildVoiceStates
-  ],
-  partials: [
-    Partials.GuildMember,
-    Partials.Channel,
-    Partials.Message,
-    Partials.Reaction
-  ]
-});
-
-async function syncApplicationCommands(client, commandDefinitions) {
+async function syncApplicationCommands(client, commandDefinitions, guildId) {
   if (!client.application) {
     return;
   }
 
-  const globalCommands = [];
-  const guildCommands = new Map();
+  const commands = commandDefinitions
+    .filter((definition) => definition?.command)
+    .map((definition) => definition.command);
 
-  for (const definition of commandDefinitions) {
-    if (!definition || !definition.command) {
-      continue;
-    }
-
-    if (definition.guildId) {
-      const commands = guildCommands.get(definition.guildId) || [];
-      commands.push(definition.command);
-      guildCommands.set(definition.guildId, commands);
-      continue;
-    }
-
-    globalCommands.push(definition.command);
-  }
-
-  await client.application.commands.set(globalCommands);
-
-  for (const guild of client.guilds.cache.values()) {
-    const commands = guildCommands.get(guild.id) || [];
-    await client.application.commands.set(commands, guild.id);
-  }
+  // Multi-instance commands are always scoped to the configured guild.
+  await client.application.commands.set([]);
+  await client.application.commands.set(commands, guildId);
 }
 
-async function bootstrap() {
-  const { loadedModules, commandDefinitions } = await loadModules(client);
+async function prepareInstance(instance) {
+  const client = createClient();
+  const { loadedModules, commandDefinitions } = await loadModules(client, {
+    guildId: instance.guildId,
+    moduleConfigs: instance.moduleConfigs,
+    serverName: instance.name,
+    serverPath: instance.serverPath
+  });
+
   client.loadedModules = loadedModules;
 
   client.once(Events.ClientReady, async () => {
-    console.log(`Bot conectado como ${client.user.tag}.`);
-    console.log(`Modulos carregados: ${loadedModules.join(", ") || "nenhum"}.`);
+    const prefix = `[${instance.name}]`;
+
+    console.log(`${prefix} Bot conectado como ${client.user.tag}.`);
+    console.log(`${prefix} Modulos carregados: ${loadedModules.join(", ") || "nenhum"}.`);
 
     try {
-      await syncApplicationCommands(client, commandDefinitions);
-      console.log("Slash commands sincronizados com sucesso.");
+      await syncApplicationCommands(client, commandDefinitions, instance.guildId);
+      console.log(`${prefix} Slash commands sincronizados com sucesso.`);
     } catch (error) {
-      console.error("Falha ao sincronizar slash commands.", error);
+      console.error(`${prefix} Falha ao sincronizar slash commands.`, error);
     }
   });
 
-  await client.login(token);
+  return { client, instance };
+}
+
+async function bootstrap() {
+  const instances = loadServerInstances();
+  const preparedInstances = [];
+
+  for (const instance of instances) {
+    preparedInstances.push(await prepareInstance(instance));
+  }
+
+  await Promise.all(preparedInstances.map(({ client, instance }) => (
+    client.login(instance.token)
+  )));
+
+  console.log(`${preparedInstances.length} instancia(s) iniciada(s).`);
 }
 
 bootstrap().catch((error) => {
-  console.error("Falha ao iniciar o bot.", error);
+  console.error("Falha ao iniciar os bots.", error);
   process.exit(1);
 });

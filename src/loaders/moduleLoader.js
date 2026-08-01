@@ -1,61 +1,92 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-async function loadModules(client) {
+async function loadModules(client, options) {
+  const {
+    guildId,
+    moduleConfigs,
+    serverName,
+    serverPath
+  } = options;
   const modulesRoot = path.resolve(__dirname, "../../modules");
-
-  if (!fs.existsSync(modulesRoot)) {
-    return { loadedModules: [], commandDefinitions: [] };
-  }
-
-  const moduleFolders = fs.readdirSync(modulesRoot, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name);
-
   const loadedModules = [];
   const commandDefinitions = [];
 
-  for (const folderName of moduleFolders) {
-    const modulePath = path.join(modulesRoot, folderName, "index.js");
-    const configPath = path.join(modulesRoot, folderName, "config.json");
+  for (const moduleConfig of moduleConfigs) {
+    const moduleName = moduleConfig.name;
+    const moduleRoot = path.join(modulesRoot, moduleName);
+    const moduleEntryPath = path.join(moduleRoot, "index.js");
 
-    if (!fs.existsSync(modulePath)) {
-      console.warn(`Modulo ignorado em ${folderName}: arquivo index.js nao encontrado.`);
-      continue;
+    if (!fs.existsSync(moduleEntryPath)) {
+      throw new Error(
+        `[${serverName}] Modulo "${moduleName}" nao encontrado em ${moduleEntryPath}.`
+      );
     }
 
     let moduleDefinition;
 
     try {
-      moduleDefinition = require(modulePath);
+      // Cada cliente recebe uma copia do modulo e do seu estado em memoria.
+      delete require.cache[require.resolve(moduleEntryPath)];
+      moduleDefinition = require(moduleEntryPath);
     } catch (error) {
-      console.error(`Modulo ignorado em ${folderName}: falha ao carregar.`, error);
-      continue;
+      throw new Error(`[${serverName}] Falha ao carregar o modulo "${moduleName}".`, {
+        cause: error
+      });
     }
-
-    const config = fs.existsSync(configPath) ? require(configPath) : {};
 
     if (typeof moduleDefinition.register !== "function") {
-      console.warn(`Modulo ignorado em ${folderName}: register() nao encontrado.`);
-      continue;
+      throw new Error(`[${serverName}] O modulo "${moduleName}" nao exporta register().`);
     }
+
+    const config = {
+      ...moduleConfig.config,
+      guildId
+    };
 
     if (typeof moduleDefinition.getCommands === "function") {
-      try {
-        const moduleCommands = moduleDefinition.getCommands(config, {
-          modulePath: path.join(modulesRoot, folderName)
-        });
+      let moduleCommands;
 
-        if (Array.isArray(moduleCommands)) {
-          commandDefinitions.push(...moduleCommands);
-        }
+      try {
+        moduleCommands = moduleDefinition.getCommands(config, {
+          modulePath: moduleRoot,
+          serverName,
+          serverPath
+        });
       } catch (error) {
-        console.error(`Falha ao coletar comandos do modulo ${folderName}.`, error);
+        throw new Error(
+          `[${serverName}] Falha ao coletar comandos do modulo "${moduleName}".`,
+          { cause: error }
+        );
       }
+
+      if (!Array.isArray(moduleCommands)) {
+        throw new Error(
+          `[${serverName}] getCommands() do modulo "${moduleName}" deve retornar um array.`
+        );
+      }
+
+      commandDefinitions.push(...moduleCommands.map((definition) => ({
+        ...definition,
+        guildId
+      })));
     }
 
-    await moduleDefinition.register({ client, config, modulePath: path.join(modulesRoot, folderName) });
-    loadedModules.push(folderName);
+    try {
+      await moduleDefinition.register({
+        client,
+        config,
+        modulePath: moduleRoot,
+        serverName,
+        serverPath
+      });
+    } catch (error) {
+      throw new Error(`[${serverName}] Falha ao registrar o modulo "${moduleName}".`, {
+        cause: error
+      });
+    }
+
+    loadedModules.push(moduleName);
   }
 
   return { loadedModules, commandDefinitions };
